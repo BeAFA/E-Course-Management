@@ -1,0 +1,23 @@
+{%extends 'layout/base.html'%}
+{%block content%}
+<link rel="stylesheet" href="/static/css/form.css">
+<body>
+{% if err_msg %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>Lỗi:</strong> {{ err_msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+<div class="box">
+    <h2>Đăng Nhập</h2>
+    <form action="/login" method="POST">
+      <input type="text" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Mật khẩu" required>
+        <button type="submit">Đăng Nhập</button>
+    </form>
+    <div class="link">
+        Chưa có tài khoản? <a href="/register">Đăng ký</a>
+    </div>
+</div>
+</body>
+{%endblock%}
