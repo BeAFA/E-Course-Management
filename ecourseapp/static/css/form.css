@@ -1,4 +1,7 @@
-body { font-family: Arial; }
+body {
+    font-family:
+    Arial;
+}
 .box {
     width: 350px; margin: 80px auto; padding: 30px;
     background: white; border-radius: 10px; box-shadow: 0 0 15px #aaa;
