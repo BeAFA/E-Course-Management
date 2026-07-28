@@ -1,17 +1,20 @@
-from flask_login import login_user
+from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash
 from flask import render_template, request, redirect
 from __init__ import app, db, login
-from models import User, UserRole
+from models import User, UserRole, Level
 import dao
+
 
 @app.route('/')
 def home():
     return render_template('home.html')
 
+
 @login.user_loader
 def get_user(user_id):
     return dao.get_user_by_id(user_id)
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -25,12 +28,15 @@ def login():
             login_user(user)
             if user.role == UserRole.STUDENT:
                 return redirect('/')
-
+            if user.role == UserRole.TEACHER:
+                return redirect('/')
+            return redirect('/')
         else:
             err_msg = "Tài khoản hoặc mật khẩu không đúng!"
             return render_template("login.html", err_msg=err_msg)
 
     return render_template("login.html")
+
 
 @app.route('/register', methods=["GET", "POST"])
 def register():
@@ -39,6 +45,7 @@ def register():
         email = request.form["email"]
         password = request.form["password"]
         confirm = request.form["confirm"]
+        role = request.form["role"]
 
         if password != confirm:
             err_msg = "Xác nhận mật khẩu không khớp!"
@@ -54,6 +61,7 @@ def register():
                     name=name,
                     email=email,
                     password=password,
+                    role=role,
                 )
                 try:
                     db.session.add(user)
@@ -66,6 +74,43 @@ def register():
                     err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
                     return render_template("register.html", err_msg=err_msg)
     return render_template("register.html")
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect('/')
+
+
+@app.route('/profile')
+@app.route('/profile/updateprofile', methods=["GET", "POST"])
+
+def profile():
+    levels = list(Level)
+    if not current_user.is_authenticated:
+        return redirect("/login")
+
+    if request.method == "POST":
+        current_user.name = request.form["name"]
+        current_user.level = Level(request.form["level"])
+        current_user.major = request.form["major"]
+
+        try:
+            db.session.commit()
+            return redirect('/profile')
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+
+            err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
+            return render_template("profile.html", user=current_user, levels=levels, err_msg=err_msg)
+
+    return render_template("profile.html", user=current_user, levels=levels)
+
+
+@app.route('/profile/updatepass')
+def update_password():
+    return render_template("change_password.html")
 
 
 if __name__ == '__main__':
