@@ -1,5 +1,5 @@
 from flask_login import login_user, logout_user, current_user
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import render_template, request, redirect
 from __init__ import app, db, login
 from models import User, UserRole, Level
@@ -84,7 +84,6 @@ def logout():
 
 @app.route('/profile')
 @app.route('/profile/updateprofile', methods=["GET", "POST"])
-
 def profile():
     levels = list(Level)
     if not current_user.is_authenticated:
@@ -108,9 +107,38 @@ def profile():
     return render_template("profile.html", user=current_user, levels=levels)
 
 
-@app.route('/profile/updatepass')
+@app.route('/profile/updatepass', methods=["GET", "POST"])
 def update_password():
-    return render_template("change_password.html")
+    if not current_user.is_authenticated:
+        return redirect("/login")
+
+    if request.method == "POST":
+        oldpassword = request.form.get('oldpassword')
+        newpassword = request.form.get("newpassword")
+        confirm = request.form.get("confirm")
+
+        if check_password_hash(current_user.password, oldpassword):
+            if check_password_hash(current_user.password, newpassword):
+                err_msg = "Mật khẩu mới phải khác mật khẩu cũ"
+                return render_template("change_password.html", user=current_user, err_msg=err_msg)
+            if newpassword != confirm:
+                err_msg = "Xác nhận mật khẩu không đúng"
+                return render_template("change_password.html", user=current_user, err_msg=err_msg)
+            try:
+                current_user.password = generate_password_hash(newpassword)
+                db.session.commit()
+                return redirect('/profile')
+            except Exception as ex:
+                db.session.rollback()
+                print(ex)
+
+                err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
+                return render_template("change_password.html", user=current_user, err_msg=err_msg)
+        else:
+            err_msg = "Mật khẩu cũ không đúng!"
+        return render_template("change_password.html", user=current_user, err_msg=err_msg)
+
+    return render_template("change_password.html", user=current_user)
 
 
 if __name__ == '__main__':
