@@ -12,6 +12,13 @@
                         Chào {{ current_user.name }}!
                     </button>
                 </a>
+                {% if current_user.role.value == 'TEACHER' %}
+                <a href="/lessons" class="btn">
+                    <button class="btn btn-outline-light mr">
+                        <i class="fa-solid fa-user-plus"></i> Danh sách bài giảng
+                    </button>
+                </a>
+                {% endif %}
                 <a href="/logout" class="btn">
                     <button class="btn btn-outline-light mr">
                         <img src="https://cdn-icons-png.flaticon.com/128/1286/1286907.png" width="25">

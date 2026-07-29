@@ -1,6 +1,6 @@
 import enum
 from flask_login import UserMixin
-from __init__ import db
+from __init__ import app, db
 
 
 # ================= ENUMS =================
@@ -92,6 +92,21 @@ class Lesson(Base):
 
     course = db.relationship("Course", backref=db.backref("lessons", cascade="all, delete-orphan"))
 
+
+
+# ================= LessonContent =================
+class LessonContent(Base):
+    __tablename__ = "lesson_content"
+
+    lesson_id = db.Column(db.ForeignKey("lesson.id", ondelete="CASCADE"), nullable= False)
+    title = db.Column(db.String(200), nullable=False)
+    video_drive_id = db.Column(db.String(100), nullable=True)
+    video_url = db.Column(db.String(500), nullable=True)
+    file_drive_id = db.Column(db.String(100), nullable=True)
+    file_url = db.Column(db.String(500), nullable=True)
+    article = db.Column(db.Text, nullable=True)
+
+    lesson = db.relationship("Lesson", backref=db.backref("lesson_contents", cascade="all, delete-orphan"))
 
 # ================= Test =================
 class Test(Base):

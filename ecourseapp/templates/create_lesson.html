@@ -1,0 +1,31 @@
+{%extends 'layout/base.html'%}
+{%block content%}
+<link rel="stylesheet" href="/static/css/form.css">
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<script src="/static/js/ckeditor.js"></script>
+<body>
+{% if err_msg %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>Lỗi:</strong> {{ err_msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+<div class="box">
+    <h2>Tạo bài học</h2>
+    <form action="/lessons/add" method="POST" enctype="multipart/form-data">
+        <h4>Tên bài giảng</h4>
+        <input type="title" name="title" required>
+        <h4>Video bài giảng (nếu có)</h4>
+        <input type="file" name="video">
+        <h4>File bài giảng (nếu có)</h4>
+        <input type="file" name="pdf">
+        <h4>Bài viết (nếu có)</h4>
+        <textarea class="ckeditor" name="article"></textarea>
+        <button type="submit" name="role" value="TEACHER">Tạo bài giảng</button>
+    </form>
+    <div class="link">
+        <a href="/lessons">Hủy</a>
+    </div>
+</div>
+</body>
+{%endblock%}
