@@ -1,8 +1,12 @@
+import os
 from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import render_template, request, redirect
+from werkzeug.utils import secure_filename
+
 from __init__ import app, db, login
-from models import User, UserRole, Level
+from ecourseapp.services.drive_service import upload_file
+from models import User, UserRole, Level, LessonContent, Lesson
 import dao
 
 
@@ -83,18 +87,54 @@ def logout():
 
 
 @app.route('/profile')
-@app.route('/profile/updateprofile', methods=["GET", "POST"])
 def profile():
-    levels = list(Level)
     if not current_user.is_authenticated:
         return redirect("/login")
 
-    if request.method == "POST":
-        current_user.name = request.form["name"]
-        current_user.level = Level(request.form["level"])
-        current_user.major = request.form["major"]
+    levels = list(Level)
+    return render_template("profile.html", levels=levels)
 
+
+@app.route('/profile/updateprofile', methods=["POST"])
+def update_profile():
+    if not current_user.is_authenticated:
+        return redirect("/login")
+
+    levels = list(Level)
+
+    current_user.name = request.form["name"]
+    current_user.level = Level(request.form["level"])
+    current_user.major = request.form["major"]
+
+    try:
+        db.session.commit()
+        return redirect('/profile')
+    except Exception as ex:
+        db.session.rollback()
+        print(ex)
+
+        err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
+        return render_template("profile.html", levels=levels, err_msg=err_msg)
+
+
+@app.route('/profile/updatepass', methods=["POST"])
+def update_password():
+    if not current_user.is_authenticated:
+        return redirect("/login")
+
+    oldpassword = request.form.get('oldpassword')
+    newpassword = request.form.get("newpassword")
+    confirm = request.form.get("confirm")
+
+    if check_password_hash(current_user.password, oldpassword):
+        if check_password_hash(current_user.password, newpassword):
+            err_msg = "Mật khẩu mới phải khác mật khẩu cũ"
+            return render_template("change_password.html", err_msg=err_msg)
+        if newpassword != confirm:
+            err_msg = "Xác nhận mật khẩu không đúng"
+            return render_template("change_password.html", err_msg=err_msg)
         try:
+            current_user.password = generate_password_hash(newpassword)
             db.session.commit()
             return redirect('/profile')
         except Exception as ex:
@@ -102,43 +142,59 @@ def profile():
             print(ex)
 
             err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
-            return render_template("profile.html", user=current_user, levels=levels, err_msg=err_msg)
+            return render_template("change_password.html", err_msg=err_msg)
+    else:
+        err_msg = "Mật khẩu cũ không đúng!"
+    return render_template("change_password.html", err_msg=err_msg)
 
-    return render_template("profile.html", user=current_user, levels=levels)
+
+@app.route('/lessons')
+def lessons():
+    lessons = db.session.query(Lesson).filter(Lesson.course_id == 2).all()
+    return render_template("lesson.html", lessons=lessons)
 
 
-@app.route('/profile/updatepass', methods=["GET", "POST"])
-def update_password():
-    if not current_user.is_authenticated:
-        return redirect("/login")
-
+@app.route("/lessons/add", methods=["GET", "POST"])
+def add_lesson():
     if request.method == "POST":
-        oldpassword = request.form.get('oldpassword')
-        newpassword = request.form.get("newpassword")
-        confirm = request.form.get("confirm")
+        video = request.files.get("video")
 
-        if check_password_hash(current_user.password, oldpassword):
-            if check_password_hash(current_user.password, newpassword):
-                err_msg = "Mật khẩu mới phải khác mật khẩu cũ"
-                return render_template("change_password.html", user=current_user, err_msg=err_msg)
-            if newpassword != confirm:
-                err_msg = "Xác nhận mật khẩu không đúng"
-                return render_template("change_password.html", user=current_user, err_msg=err_msg)
-            try:
-                current_user.password = generate_password_hash(newpassword)
-                db.session.commit()
-                return redirect('/profile')
-            except Exception as ex:
-                db.session.rollback()
-                print(ex)
+        video_drive_id = None
+        video_url = None
 
-                err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
-                return render_template("change_password.html", user=current_user, err_msg=err_msg)
-        else:
-            err_msg = "Mật khẩu cũ không đúng!"
-        return render_template("change_password.html", user=current_user, err_msg=err_msg)
+        if video and video.filename:
+            filename = secure_filename(video.filename)
 
-    return render_template("change_password.html", user=current_user)
+            filepath = os.path.join("temp", filename)
+
+            video.save(filepath)
+
+            video_drive_id, video_url = upload_file(
+                filepath,
+                filename
+            )
+
+            os.remove(filepath)
+
+        lesson = LessonContent(
+            lesson_id=request.form["lesson_id"],
+            title=request.form["title"],
+            video_drive_id=video_drive_id,
+            video_url=video_url,
+            article=request.form.get("article")
+        )
+
+        try:
+            db.session.add(lesson)
+            db.session.commit()
+
+            return redirect("/lesson")
+
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return "Upload failed"
+    return render_template("create_lesson.html")
 
 
 if __name__ == '__main__':
