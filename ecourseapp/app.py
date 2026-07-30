@@ -5,9 +5,11 @@ from flask import render_template, request, redirect
 from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login
-from ecourseapp.services.drive_service import upload_file
-from models import User, UserRole, Level, LessonContent, Lesson
+from services.drive_service import upload_file
+from models import User, UserRole, Level, Lesson, Chapter
 import dao
+
+TEMP_UPLOAD_DIR = "temp"
 
 
 @app.route('/')
@@ -21,7 +23,7 @@ def get_user(user_id):
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login():
+def login_my_user():
     if request.method == "POST":
         email = request.form.get('email')
         password = request.form.get('password')
@@ -43,7 +45,8 @@ def login():
 
 
 @app.route('/register', methods=["GET", "POST"])
-def register():
+def register_new_user():
+    # Chỉnh sửa thêm nghiệp vụ đăng ký cho giảng viên
     if request.method == "POST":
         name = request.form["name"]
         email = request.form["email"]
@@ -60,14 +63,14 @@ def register():
                 err_msg = "Tài khoản này đã được đăng ký"
                 return render_template("register.html", err_msg=err_msg)
             else:
-                password = generate_password_hash(password)
-                user = User(
-                    name=name,
-                    email=email,
-                    password=password,
-                    role=role,
-                )
                 try:
+                    password = generate_password_hash(password)
+                    user = User(
+                        name=name,
+                        email=email,
+                        password=password,
+                        role=UserRole(role),
+                    )
                     db.session.add(user)
                     db.session.commit()
                     return redirect('/login')
@@ -81,13 +84,13 @@ def register():
 
 
 @app.route('/logout')
-def logout():
+def logout_my_user():
     logout_user()
     return redirect('/')
 
 
 @app.route('/profile')
-def profile():
+def profile_my_user():
     if not current_user.is_authenticated:
         return redirect("/login")
 
@@ -148,53 +151,77 @@ def update_password():
     return render_template("change_password.html", err_msg=err_msg)
 
 
-@app.route('/lessons')
-def lessons():
-    lessons = db.session.query(Lesson).filter(Lesson.course_id == 2).all()
-    return render_template("lesson.html", lessons=lessons)
+@app.route('/courses/<int:course_id>/chapters')
+def chapters(course_id):
+    course = dao.get_course_by_id(course_id)
+    if not current_user.is_authenticated or not dao.is_course_owner(current_user, course):
+        return redirect("/")
+    chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
+    return render_template("chapter.html", chapters=chapter_list, course_id=course_id)
 
 
-@app.route("/lessons/add", methods=["GET", "POST"])
-def add_lesson():
+@app.route('/chapters/<int:chapter_id>/lessons')
+def lessons(chapter_id):
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+    lesson_list = db.session.query(Lesson).filter(Lesson.chapter_id == chapter_id).all()
+    return render_template("lesson.html", lessons=lesson_list, chapter_id=chapter_id)
+
+
+@app.route("/chapters/<int:chapter_id>/lessons/add", methods=["GET", "POST"])
+def add_lesson(chapter_id):
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
     if request.method == "POST":
         video = request.files.get("video")
-
         video_drive_id = None
         video_url = None
-
+        os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
         if video and video.filename:
             filename = secure_filename(video.filename)
-
-            filepath = os.path.join("temp", filename)
-
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
             video.save(filepath)
-
             video_drive_id, video_url = upload_file(
                 filepath,
                 filename
             )
-
             os.remove(filepath)
 
-        lesson = LessonContent(
-            lesson_id=request.form["lesson_id"],
+        pdf_file = request.files.get("pdf")
+        file_drive_id = None
+        file_url = None
+        if pdf_file and pdf_file.filename:
+            filename = secure_filename(pdf_file.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            pdf_file.save(filepath)
+            file_drive_id, file_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+
+
+        lesson = Lesson(
+            chapter_id=chapter_id,
             title=request.form["title"],
             video_drive_id=video_drive_id,
             video_url=video_url,
+            file_drive_id=file_drive_id,
+            file_url=file_url,
             article=request.form.get("article")
         )
 
         try:
             db.session.add(lesson)
             db.session.commit()
-
-            return redirect("/lesson")
+            return redirect(f"/courses/{chapter.course_id}/chapters")
 
         except Exception as ex:
             db.session.rollback()
             print(ex)
             return "Upload failed"
-    return render_template("create_lesson.html")
+    return render_template("create_lesson.html", chapter_id=chapter_id)
 
 
 if __name__ == '__main__':

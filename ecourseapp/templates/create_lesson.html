@@ -12,16 +12,16 @@
 {% endif %}
 <div class="box">
     <h2>Tạo bài học</h2>
-    <form action="/lessons/add" method="POST" enctype="multipart/form-data">
+    <form action="/chapters/{{ chapter_id }}/lessons/add" method="POST" enctype="multipart/form-data">
         <h4>Tên bài giảng</h4>
-        <input type="title" name="title" required>
+        <input type="text" name="title" required>
         <h4>Video bài giảng (nếu có)</h4>
         <input type="file" name="video">
         <h4>File bài giảng (nếu có)</h4>
         <input type="file" name="pdf">
         <h4>Bài viết (nếu có)</h4>
         <textarea class="ckeditor" name="article"></textarea>
-        <button type="submit" name="role" value="TEACHER">Tạo bài giảng</button>
+        <button type="submit">Tạo bài giảng</button>
     </form>
     <div class="link">
         <a href="/lessons">Hủy</a>
