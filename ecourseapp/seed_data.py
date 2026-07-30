@@ -1,261 +1,304 @@
-"""
-File tạo dữ liệu mẫu (seed data) cho các model trong models.py
-Chạy: python seed_data.py
-"""
+from datetime import datetime, timedelta
+
 from werkzeug.security import generate_password_hash
-from datetime import datetime
 
 from __init__ import app, db
 from models import (
     User, UserRole, Level,
     Category, Tag, Course, CourseTag,
-    Lesson, Test, UserTest,
-    Forum, ForumMessage,
-    RegisteredClass, PaymentHistory, PaymentMethod
+    Chapter, Lesson,
+    Test, Question, Choice,
+    UserTest,
+    ChatRoom, ChatRoomMessage,
+    Enrollment,
+    PaymentHistory, PaymentMethod,
 )
 
 
-def hash_pw(raw):
-    return generate_password_hash(raw)
+def hash_password(raw_password: str) -> str:
+    return generate_password_hash(raw_password)
 
 
 def seed():
-    with app.app_context():
-        # Xoá dữ liệu cũ (nếu có) rồi tạo lại bảng
-        db.drop_all()
-        db.create_all()
+    # ================= USER =================
+    users = [
+        User(email="admin@ecourse.vn", password=hash_password("123456"),
+             name="Nguyễn Văn Admin", role=UserRole.ADMIN),
 
-        # ================= USERS =================
-        users = [
-            User(email="admin@gmail.com", password=hash_pw("123456"),
-                 name="Quản trị viên", role=UserRole.ADMIN),
-            User(email="teacher1@gmail.com", password=hash_pw("123456"),
-                 name="Nguyễn Văn A", role=UserRole.TEACHER, major="Công nghệ thông tin"),
-            User(email="teacher2@gmail.com", password=hash_pw("123456"),
-                 name="Trần Thị B", role=UserRole.TEACHER, major="Toán học"),
-            User(email="teacher3@gmail.com", password=hash_pw("123456"),
-                 name="Lê Văn C", role=UserRole.TEACHER, major="Tiếng Anh"),
-            User(email="student1@gmail.com", password=hash_pw("123456"),
-                 name="Phạm Thị D", role=UserRole.STUDENT, level=Level.JUNIOR, major="CNTT"),
-            User(email="student2@gmail.com", password=hash_pw("123456"),
-                 name="Hoàng Văn E", role=UserRole.STUDENT, level=Level.SENIOR, major="Kinh tế"),
-            User(email="student3@gmail.com", password=hash_pw("123456"),
-                 name="Đỗ Thị F", role=UserRole.STUDENT, level=Level.MASTER, major="CNTT"),
-            User(email="student4@gmail.com", password=hash_pw("123456"),
-                 name="Vũ Văn G", role=UserRole.STUDENT, level=Level.EXPERT, major="Marketing"),
-        ]
-        db.session.add_all(users)
-        db.session.commit()
+        User(email="teacher.hoa@ecourse.vn", password=hash_password("123456"),
+             name="Trần Thị Hoa", role=UserRole.TEACHER, major="Công nghệ phần mềm"),
+        User(email="teacher.nam@ecourse.vn", password=hash_password("123456"),
+             name="Lê Văn Nam", role=UserRole.TEACHER, major="Khoa học dữ liệu"),
+        User(email="teacher.linh@ecourse.vn", password=hash_password("123456"),
+             name="Phạm Thùy Linh", role=UserRole.TEACHER, major="Thiết kế UI/UX"),
 
-        admin, teacher1, teacher2, teacher3, student1, student2, student3, student4 = users
+        User(email="student.an@ecourse.vn", password=hash_password("123456"),
+             name="Đỗ Văn An", role=UserRole.STUDENT, level=Level.JUNIOR),
+        User(email="student.binh@ecourse.vn", password=hash_password("123456"),
+             name="Vũ Thị Bình", role=UserRole.STUDENT, level=Level.SENIOR),
+        User(email="student.cuong@ecourse.vn", password=hash_password("123456"),
+             name="Hoàng Văn Cường", role=UserRole.STUDENT, level=Level.MASTER),
+        User(email="student.dung@ecourse.vn", password=hash_password("123456"),
+             name="Ngô Thị Dung", role=UserRole.STUDENT, level=Level.EXPERT),
+    ]
+    db.session.add_all(users)
+    db.session.commit()
 
-        # ================= CATEGORY =================
-        categories = [
-            Category(name="Lập trình Web"),
-            Category(name="Lập trình di động"),
-            Category(name="Cơ sở dữ liệu"),
-            Category(name="Trí tuệ nhân tạo"),
-            Category(name="Ngoại ngữ"),
-            Category(name="Kỹ năng mềm"),
-        ]
-        db.session.add_all(categories)
-        db.session.commit()
+    admin = users[0]
+    teachers = users[1:4]
+    students = users[4:8]
 
-        cat_web, cat_mobile, cat_db, cat_ai, cat_lang, cat_soft = categories
+    # ================= CATEGORY =================
+    categories = [
+        Category(name="Lập trình Web"),
+        Category(name="Khoa học dữ liệu"),
+        Category(name="Thiết kế đồ họa"),
+        Category(name="Trí tuệ nhân tạo"),
+        Category(name="Kỹ năng mềm"),
+    ]
+    db.session.add_all(categories)
+    db.session.commit()
 
-        # ================= TAG =================
-        tags = [
-            Tag(name="Python"),
-            Tag(name="JavaScript"),
-            Tag(name="Flutter"),
-            Tag(name="MySQL"),
-            Tag(name="Machine Learning"),
-            Tag(name="Giao tiếp"),
-            Tag(name="Cơ bản"),
-        ]
-        db.session.add_all(tags)
-        db.session.commit()
+    # ================= TAG =================
+    tags = [
+        Tag(name="Python"),
+        Tag(name="Flask"),
+        Tag(name="SQL"),
+        Tag(name="Machine Learning"),
+        Tag(name="UI/UX"),
+        Tag(name="Giao tiếp"),
+    ]
+    db.session.add_all(tags)
+    db.session.commit()
 
-        tag_python, tag_js, tag_flutter, tag_mysql, tag_ml, tag_comm, tag_basic = tags
+    # ================= COURSE =================
+    courses = [
+        Course(name="Lập trình Python cơ bản", price=299000,
+               category_id=categories[0].id, teacher_id=teachers[0].id,
+               description="Khóa học nhập môn Python cho người mới bắt đầu."),
+        Course(name="Xây dựng Web với Flask", price=499000,
+               category_id=categories[0].id, teacher_id=teachers[0].id,
+               description="Học cách xây dựng ứng dụng web bằng Flask và SQLAlchemy."),
+        Course(name="Phân tích dữ liệu với Pandas", price=399000,
+               category_id=categories[1].id, teacher_id=teachers[1].id,
+               description="Xử lý và phân tích dữ liệu với thư viện Pandas."),
+        Course(name="Nhập môn Machine Learning", price=599000,
+               category_id=categories[3].id, teacher_id=teachers[1].id,
+               description="Kiến thức nền tảng về học máy và các thuật toán phổ biến."),
+        Course(name="Thiết kế UI/UX cho người mới", price=349000,
+               category_id=categories[2].id, teacher_id=teachers[2].id,
+               description="Nguyên tắc thiết kế giao diện và trải nghiệm người dùng."),
+        Course(name="Figma từ cơ bản đến nâng cao", price=259000,
+               category_id=categories[2].id, teacher_id=teachers[2].id,
+               description="Thành thạo công cụ thiết kế Figma qua các dự án thực tế."),
+        Course(name="Kỹ năng giao tiếp hiệu quả", price=199000,
+               category_id=categories[4].id, teacher_id=teachers[0].id,
+               description="Rèn luyện kỹ năng giao tiếp và thuyết trình."),
+    ]
+    db.session.add_all(courses)
+    db.session.commit()
 
-        # ================= COURSE =================
-        courses = [
-            Course(name="Lập trình Python cơ bản", price=500000, category_id=cat_web.id,
-                   description="Khoá học nhập môn Python cho người mới bắt đầu.", user_id=teacher1.id),
-            Course(name="Xây dựng Web với Flask", price=800000, category_id=cat_web.id,
-                   description="Học cách xây dựng ứng dụng web bằng Flask.", user_id=teacher1.id),
-            Course(name="Phát triển ứng dụng Flutter", price=900000, category_id=cat_mobile.id,
-                   description="Xây dựng app di động đa nền tảng với Flutter.", user_id=teacher2.id),
-            Course(name="Thiết kế cơ sở dữ liệu MySQL", price=600000, category_id=cat_db.id,
-                   description="Thiết kế và quản trị cơ sở dữ liệu quan hệ.", user_id=teacher2.id),
-            Course(name="Nhập môn Machine Learning", price=1200000, category_id=cat_ai.id,
-                   description="Kiến thức nền tảng về học máy.", user_id=teacher3.id),
-            Course(name="Tiếng Anh giao tiếp cơ bản", price=400000, category_id=cat_lang.id,
-                   description="Rèn luyện kỹ năng giao tiếp tiếng Anh.", user_id=teacher3.id),
-            Course(name="Kỹ năng thuyết trình", price=300000, category_id=cat_soft.id,
-                   description="Nâng cao khả năng thuyết trình trước đám đông.", user_id=teacher1.id),
-        ]
-        db.session.add_all(courses)
-        db.session.commit()
+    # ================= COURSE_TAG =================
+    course_tags = [
+        CourseTag(course_id=courses[0].id, tag_id=tags[0].id),   # Python cơ bản - Python
+        CourseTag(course_id=courses[1].id, tag_id=tags[0].id),   # Flask - Python
+        CourseTag(course_id=courses[1].id, tag_id=tags[1].id),   # Flask - Flask
+        CourseTag(course_id=courses[2].id, tag_id=tags[0].id),   # Pandas - Python
+        CourseTag(course_id=courses[2].id, tag_id=tags[2].id),   # Pandas - SQL
+        CourseTag(course_id=courses[3].id, tag_id=tags[3].id),   # ML - Machine Learning
+        CourseTag(course_id=courses[4].id, tag_id=tags[4].id),   # UI/UX - UI/UX
+        CourseTag(course_id=courses[6].id, tag_id=tags[5].id),   # Giao tiếp - Giao tiếp
+    ]
+    db.session.add_all(course_tags)
+    db.session.commit()
 
-        (course_python, course_flask, course_flutter, course_mysql,
-         course_ml, course_english, course_present) = courses
+    # ================= CHAPTER =================
+    chapters = [
+        Chapter(name="Chương 1: Làm quen với Python", course_id=courses[0].id,
+                description="Cài đặt môi trường và cú pháp cơ bản."),
+        Chapter(name="Chương 2: Cấu trúc dữ liệu", course_id=courses[0].id,
+                description="List, Tuple, Dictionary, Set."),
+        Chapter(name="Chương 1: Giới thiệu Flask", course_id=courses[1].id,
+                description="Cấu trúc project và routing cơ bản."),
+        Chapter(name="Chương 2: Làm việc với SQLAlchemy", course_id=courses[1].id,
+                description="Định nghĩa model và truy vấn dữ liệu."),
+        Chapter(name="Chương 1: Tổng quan Pandas", course_id=courses[2].id,
+                description="DataFrame và Series."),
+        Chapter(name="Chương 1: Các thuật toán cơ bản", course_id=courses[3].id,
+                description="Hồi quy tuyến tính, phân loại."),
+        Chapter(name="Chương 1: Nguyên lý thiết kế", course_id=courses[4].id,
+                description="Màu sắc, bố cục, typography."),
+        Chapter(name="Chương 1: Kỹ năng thuyết trình", course_id=courses[6].id,
+                description="Cách xây dựng và trình bày một bài thuyết trình."),
+    ]
+    db.session.add_all(chapters)
+    db.session.commit()
 
-        # ================= COURSE - TAG =================
-        course_tags = [
-            CourseTag(course_id=course_python.id, tag_id=tag_python.id),
-            CourseTag(course_id=course_python.id, tag_id=tag_basic.id),
-            CourseTag(course_id=course_flask.id, tag_id=tag_python.id),
-            CourseTag(course_id=course_flutter.id, tag_id=tag_flutter.id),
-            CourseTag(course_id=course_mysql.id, tag_id=tag_mysql.id),
-            CourseTag(course_id=course_ml.id, tag_id=tag_ml.id),
-            CourseTag(course_id=course_ml.id, tag_id=tag_python.id),
-            CourseTag(course_id=course_english.id, tag_id=tag_comm.id),
-            CourseTag(course_id=course_present.id, tag_id=tag_comm.id),
-        ]
-        db.session.add_all(course_tags)
-        db.session.commit()
+    # ================= LESSON =================
+    lessons = [
+        Lesson(chapter_id=chapters[0].id, title="Cài đặt Python và IDE",
+               video_url="https://video.ecourse.vn/py-install.mp4"),
+        Lesson(chapter_id=chapters[0].id, title="Biến và kiểu dữ liệu",
+               video_url="https://video.ecourse.vn/py-variables.mp4"),
+        Lesson(chapter_id=chapters[1].id, title="Làm việc với List và Tuple",
+               video_url="https://video.ecourse.vn/py-list.mp4"),
+        Lesson(chapter_id=chapters[2].id, title="Tạo project Flask đầu tiên",
+               video_url="https://video.ecourse.vn/flask-intro.mp4"),
+        Lesson(chapter_id=chapters[3].id, title="Định nghĩa model với SQLAlchemy",
+               video_url="https://video.ecourse.vn/flask-model.mp4"),
+        Lesson(chapter_id=chapters[4].id, title="Đọc dữ liệu từ file CSV",
+               video_url="https://video.ecourse.vn/pandas-csv.mp4"),
+        Lesson(chapter_id=chapters[5].id, title="Hồi quy tuyến tính là gì?",
+               article="Bài viết giới thiệu về hồi quy tuyến tính..."),
+        Lesson(chapter_id=chapters[6].id, title="Nguyên lý màu sắc trong thiết kế",
+               video_url="https://video.ecourse.vn/uiux-color.mp4"),
+        Lesson(chapter_id=chapters[7].id, title="Cấu trúc một bài thuyết trình hay",
+               article="Bài viết chia sẻ cấu trúc mở - thân - kết cho bài thuyết trình."),
+    ]
+    db.session.add_all(lessons)
+    db.session.commit()
 
-        # ================= LESSON =================
-        lessons = [
-            Lesson(name="Giới thiệu Python", description="Cài đặt môi trường và cú pháp cơ bản.",
-                   course_id=course_python.id),
-            Lesson(name="Biến và kiểu dữ liệu", description="Các kiểu dữ liệu trong Python.",
-                   course_id=course_python.id),
-            Lesson(name="Giới thiệu Flask", description="Cấu trúc project Flask.",
-                   course_id=course_flask.id),
-            Lesson(name="Routing trong Flask", description="Định tuyến URL trong Flask.",
-                   course_id=course_flask.id),
-            Lesson(name="Widget cơ bản trong Flutter", description="Các widget phổ biến.",
-                   course_id=course_flutter.id),
-            Lesson(name="Thiết kế ERD", description="Cách thiết kế mô hình thực thể liên kết.",
-                   course_id=course_mysql.id),
-            Lesson(name="Hồi quy tuyến tính", description="Thuật toán Linear Regression.",
-                   course_id=course_ml.id),
-            Lesson(name="Giao tiếp trong công việc", description="Mẫu câu giao tiếp công sở.",
-                   course_id=course_english.id),
-        ]
-        db.session.add_all(lessons)
-        db.session.commit()
+    # ================= TEST =================
+    tests = [
+        Test(name="Kiểm tra Chương 1", chapter_id=chapters[0].id,
+             description="Kiểm tra kiến thức cơ bản về Python.", total_score=10),
+        Test(name="Kiểm tra Chương 2", chapter_id=chapters[1].id,
+             description="Kiểm tra kiến thức về cấu trúc dữ liệu.", total_score=10),
+        Test(name="Kiểm tra Flask cơ bản", chapter_id=chapters[2].id,
+             description="Kiểm tra kiến thức routing trong Flask.", total_score=10),
+        Test(name="Kiểm tra SQLAlchemy", chapter_id=chapters[3].id,
+             description="Kiểm tra kiến thức về model và quan hệ.", total_score=10),
+        Test(name="Kiểm tra Pandas", chapter_id=chapters[4].id,
+             description="Kiểm tra kiến thức về DataFrame.", total_score=10),
+        Test(name="Kiểm tra thiết kế UI/UX", chapter_id=chapters[6].id,
+             description="Kiểm tra kiến thức về nguyên lý thiết kế.", total_score=10),
+    ]
+    db.session.add_all(tests)
+    db.session.commit()
 
-        (lesson_py1, lesson_py2, lesson_flask1, lesson_flask2,
-         lesson_flutter1, lesson_mysql1, lesson_ml1, lesson_en1) = lessons
+    # ================= QUESTION =================
+    questions = [
+        Question(test_id=tests[0].id, content="Python là ngôn ngữ lập trình thông dịch hay biên dịch?"),
+        Question(test_id=tests[0].id, content="Từ khóa nào dùng để định nghĩa hàm trong Python?"),
+        Question(test_id=tests[1].id, content="Kiểu dữ liệu nào trong Python không thể thay đổi (immutable)?"),
+        Question(test_id=tests[2].id, content="Decorator nào dùng để định nghĩa route trong Flask?"),
+        Question(test_id=tests[3].id, content="Lớp nào trong SQLAlchemy dùng để định nghĩa quan hệ giữa hai bảng?"),
+        Question(test_id=tests[4].id, content="Hàm nào dùng để đọc file CSV trong Pandas?"),
+    ]
+    db.session.add_all(questions)
+    db.session.commit()
 
-        # ================= TEST =================
-        tests = [
-            Test(name="Kiểm tra Python cơ bản", description="Bài test 15 câu trắc nghiệm.",
-                 lesson_id=lesson_py1.id, total_score=10),
-            Test(name="Kiểm tra biến & kiểu dữ liệu", description="Bài test thực hành.",
-                 lesson_id=lesson_py2.id, total_score=10),
-            Test(name="Kiểm tra Routing Flask", description="Bài test về định tuyến.",
-                 lesson_id=lesson_flask2.id, total_score=10),
-            Test(name="Kiểm tra Widget Flutter", description="Bài test về widget.",
-                 lesson_id=lesson_flutter1.id, total_score=10),
-            Test(name="Kiểm tra thiết kế ERD", description="Bài test thiết kế CSDL.",
-                 lesson_id=lesson_mysql1.id, total_score=10),
-            Test(name="Kiểm tra hồi quy tuyến tính", description="Bài test lý thuyết ML.",
-                 lesson_id=lesson_ml1.id, total_score=10),
-        ]
-        db.session.add_all(tests)
-        db.session.commit()
+    # ================= CHOICE =================
+    # Chỉ tạo mẫu cho 2 câu hỏi đầu (4 lựa chọn/câu) để đủ khoảng 5-10 bản ghi
+    choices = [
+        Choice(question_id=questions[0].id, answer="Thông dịch (Interpreted)", is_true=True),
+        Choice(question_id=questions[0].id, answer="Biên dịch (Compiled)", is_true=False),
+        Choice(question_id=questions[0].id, answer="Cả hai đều đúng", is_true=False),
+        Choice(question_id=questions[0].id, answer="Không xác định", is_true=False),
 
-        (test_py1, test_py2, test_flask2, test_flutter1,
-         test_mysql1, test_ml1) = tests
+        Choice(question_id=questions[1].id, answer="def", is_true=True),
+        Choice(question_id=questions[1].id, answer="function", is_true=False),
+        Choice(question_id=questions[1].id, answer="func", is_true=False),
+        Choice(question_id=questions[1].id, answer="lambda", is_true=False),
+    ]
+    db.session.add_all(choices)
+    db.session.commit()
 
-        # ================= USER - TEST =================
-        user_tests = [
-            UserTest(user_id=student1.id, test_id=test_py1.id, score=8.5),
-            UserTest(user_id=student1.id, test_id=test_py2.id, score=9.0),
-            UserTest(user_id=student2.id, test_id=test_flask2.id, score=7.5),
-            UserTest(user_id=student3.id, test_id=test_flutter1.id, score=8.0),
-            UserTest(user_id=student3.id, test_id=test_mysql1.id, score=9.5),
-            UserTest(user_id=student4.id, test_id=test_ml1.id, score=6.5),
-        ]
-        db.session.add_all(user_tests)
-        db.session.commit()
+    # ================= USER_TEST =================
+    user_tests = [
+        UserTest(user_id=students[0].id, test_id=tests[0].id, score=8.5),
+        UserTest(user_id=students[0].id, test_id=tests[1].id, score=7.0),
+        UserTest(user_id=students[1].id, test_id=tests[0].id, score=9.0),
+        UserTest(user_id=students[2].id, test_id=tests[2].id, score=6.5),
+        UserTest(user_id=students[2].id, test_id=tests[3].id, score=8.0),
+        UserTest(user_id=students[3].id, test_id=tests[4].id, score=7.5),
+    ]
+    db.session.add_all(user_tests)
+    db.session.commit()
 
-        # ================= FORUM =================
-        forums = [
-            Forum(student_id=student1.id, teacher_id=teacher1.id, course_id=course_python.id),
-            Forum(student_id=student2.id, teacher_id=teacher1.id, course_id=course_flask.id),
-            Forum(student_id=student3.id, teacher_id=teacher2.id, course_id=course_flutter.id),
-            Forum(student_id=student3.id, teacher_id=teacher2.id, course_id=course_mysql.id),
-            Forum(student_id=student4.id, teacher_id=teacher3.id, course_id=course_ml.id),
-        ]
-        db.session.add_all(forums)
-        db.session.commit()
+    # ================= CHAT_ROOM =================
+    chat_rooms = [
+        ChatRoom(student_id=students[0].id, teacher_id=teachers[0].id, course_id=courses[0].id),
+        ChatRoom(student_id=students[1].id, teacher_id=teachers[0].id, course_id=courses[1].id),
+        ChatRoom(student_id=students[2].id, teacher_id=teachers[1].id, course_id=courses[2].id),
+        ChatRoom(student_id=students[3].id, teacher_id=teachers[1].id, course_id=courses[3].id),
+        ChatRoom(student_id=students[0].id, teacher_id=teachers[2].id, course_id=courses[4].id),
+    ]
+    db.session.add_all(chat_rooms)
+    db.session.commit()
 
-        forum1, forum2, forum3, forum4, forum5 = forums
+    # ================= CHAT_ROOM_MESSAGE =================
+    chat_messages = [
+        ChatRoomMessage(chat_room_id=chat_rooms[0].id, sender_id=students[0].id,
+                         content="Thầy ơi em chưa hiểu về list comprehension ạ."),
+        ChatRoomMessage(chat_room_id=chat_rooms[0].id, sender_id=teachers[0].id,
+                         content="Em xem lại bài giảng chương 2 nhé, thầy có ví dụ chi tiết."),
+        ChatRoomMessage(chat_room_id=chat_rooms[1].id, sender_id=students[1].id,
+                         content="Route trong Flask có bắt buộc phải trùng tên hàm không thầy?"),
+        ChatRoomMessage(chat_room_id=chat_rooms[1].id, sender_id=teachers[0].id,
+                         content="Không bắt buộc, endpoint có thể đặt tên khác em nhé."),
+        ChatRoomMessage(chat_room_id=chat_rooms[2].id, sender_id=students[2].id,
+                         content="Cô ơi DataFrame và Series khác nhau chỗ nào ạ?"),
+        ChatRoomMessage(chat_room_id=chat_rooms[3].id, sender_id=students[3].id,
+                         content="Cô cho em hỏi về overfitting trong ML với ạ."),
+        ChatRoomMessage(chat_room_id=chat_rooms[3].id, sender_id=teachers[1].id,
+                         content="Overfitting là khi mô hình học quá khớp với dữ liệu train, em xem lại slide 12."),
+        ChatRoomMessage(chat_room_id=chat_rooms[4].id, sender_id=students[0].id,
+                         content="Cô ơi Figma với Adobe XD nên học cái nào trước ạ?"),
+    ]
+    db.session.add_all(chat_messages)
+    db.session.commit()
 
-        # ================= FORUM MESSAGE =================
-        forum_messages = [
-            ForumMessage(forum_id=forum1.id, sender_id=student1.id,
-                         content="Thầy ơi, em không cài được Python ạ."),
-            ForumMessage(forum_id=forum1.id, sender_id=teacher1.id,
-                         content="Em thử tải lại bản Python 3.11 xem sao."),
-            ForumMessage(forum_id=forum2.id, sender_id=student2.id,
-                         content="Flask chạy báo lỗi ModuleNotFoundError ạ."),
-            ForumMessage(forum_id=forum2.id, sender_id=teacher1.id,
-                         content="Em kiểm tra lại đã activate virtualenv chưa nhé."),
-            ForumMessage(forum_id=forum3.id, sender_id=student3.id,
-                         content="Widget StatefulWidget dùng khi nào ạ thầy?"),
-            ForumMessage(forum_id=forum4.id, sender_id=student3.id,
-                         content="Em thiết kế ERD này đã chuẩn 3NF chưa ạ?"),
-            ForumMessage(forum_id=forum5.id, sender_id=student4.id,
-                         content="Cô ơi cho em hỏi công thức hồi quy tuyến tính."),
-        ]
-        db.session.add_all(forum_messages)
-        db.session.commit()
+    # ================= ENROLLMENT =================
+    now = datetime.now()
+    enrollments = [
+        Enrollment(user_id=students[0].id, course_id=courses[0].id,
+                   completed_date=now - timedelta(days=2), success_percentage=100),
+        Enrollment(user_id=students[0].id, course_id=courses[1].id,
+                   success_percentage=45),
+        Enrollment(user_id=students[1].id, course_id=courses[0].id,
+                   completed_date=now - timedelta(days=10), success_percentage=100),
+        Enrollment(user_id=students[2].id, course_id=courses[2].id,
+                   success_percentage=60),
+        Enrollment(user_id=students[2].id, course_id=courses[3].id,
+                   success_percentage=20),
+        Enrollment(user_id=students[3].id, course_id=courses[4].id,
+                   success_percentage=80),
+        Enrollment(user_id=students[3].id, course_id=courses[6].id,
+                   completed_date=now - timedelta(days=1), success_percentage=100),
+    ]
+    db.session.add_all(enrollments)
+    db.session.commit()
 
-        # ================= REGISTERED CLASS =================
-        registered_classes = [
-            RegisteredClass(user_id=student1.id, course_id=course_python.id,
-                             completed_date=datetime(2026, 6, 1), success_percentage=100),
-            RegisteredClass(user_id=student1.id, course_id=course_flask.id,
-                             completed_date=None, success_percentage=45),
-            RegisteredClass(user_id=student2.id, course_id=course_flask.id,
-                             completed_date=datetime(2026, 5, 20), success_percentage=100),
-            RegisteredClass(user_id=student3.id, course_id=course_flutter.id,
-                             completed_date=datetime(2026, 4, 15), success_percentage=100),
-            RegisteredClass(user_id=student3.id, course_id=course_mysql.id,
-                             completed_date=None, success_percentage=70),
-            RegisteredClass(user_id=student4.id, course_id=course_ml.id,
-                             completed_date=None, success_percentage=30),
-            RegisteredClass(user_id=student4.id, course_id=course_english.id,
-                             completed_date=datetime(2026, 3, 10), success_percentage=100),
-        ]
-        db.session.add_all(registered_classes)
-        db.session.commit()
+    # ================= PAYMENT_HISTORY =================
+    payments = [
+        PaymentHistory(user_id=students[0].id, course_id=courses[0].id,
+                        transaction_id="TX0001", payment_method=PaymentMethod.MOMO,
+                        price=299000),
+        PaymentHistory(user_id=students[0].id, course_id=courses[1].id,
+                        transaction_id="TX0002", payment_method=PaymentMethod.VNPAY,
+                        price=499000),
+        PaymentHistory(user_id=students[1].id, course_id=courses[0].id,
+                        transaction_id="TX0003", payment_method=PaymentMethod.MOMO,
+                        price=299000),
+        PaymentHistory(user_id=students[2].id, course_id=courses[2].id,
+                        transaction_id="TX0004", payment_method=PaymentMethod.VNPAY,
+                        price=399000),
+        PaymentHistory(user_id=students[2].id, course_id=courses[3].id,
+                        transaction_id="TX0005", payment_method=PaymentMethod.MOMO,
+                        price=599000),
+        PaymentHistory(user_id=students[3].id, course_id=courses[4].id,
+                        transaction_id="TX0006", payment_method=PaymentMethod.VNPAY,
+                        price=349000),
+    ]
+    db.session.add_all(payments)
+    db.session.commit()
 
-        # ================= PAYMENT HISTORY =================
-        payments = [
-            PaymentHistory(user_id=student1.id, course_id=course_python.id,
-                            transaction_id="TXN0001", payment_method=PaymentMethod.MOMO,
-                            price=500000),
-            PaymentHistory(user_id=student1.id, course_id=course_flask.id,
-                            transaction_id="TXN0002", payment_method=PaymentMethod.VNPAY,
-                            price=800000),
-            PaymentHistory(user_id=student2.id, course_id=course_flask.id,
-                            transaction_id="TXN0003", payment_method=PaymentMethod.MOMO,
-                            price=800000),
-            PaymentHistory(user_id=student3.id, course_id=course_flutter.id,
-                            transaction_id="TXN0004", payment_method=PaymentMethod.VNPAY,
-                            price=900000),
-            PaymentHistory(user_id=student3.id, course_id=course_mysql.id,
-                            transaction_id="TXN0005", payment_method=PaymentMethod.MOMO,
-                            price=600000),
-            PaymentHistory(user_id=student4.id, course_id=course_ml.id,
-                            transaction_id="TXN0006", payment_method=PaymentMethod.VNPAY,
-                            price=1200000),
-            PaymentHistory(user_id=student4.id, course_id=course_english.id,
-                            transaction_id="TXN0007", payment_method=PaymentMethod.MOMO,
-                            price=400000),
-        ]
-        db.session.add_all(payments)
-        db.session.commit()
-
-        print("✅ Đã tạo dữ liệu mẫu thành công!")
+    print("Seed dữ liệu mẫu thành công!")
 
 
 if __name__ == "__main__":
-    seed()
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        seed()
