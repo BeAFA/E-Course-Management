@@ -2,14 +2,63 @@ from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import render_template, request, redirect
 from __init__ import app, db, login
-from models import User, UserRole, Level
+from models import User, UserRole, Level, Course
 import dao
 
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    kw = request.args.get('kw')
+    category_id = request.args.get('category_id')
 
+    courses = dao.get_courses(kw=kw, category_id=category_id)
+    return render_template('home.html', courses=courses)
+
+@app.route('/courses/<int:course_id>')
+def course_detail(course_id):
+    course = dao.get_course_by_id(course_id)
+    
+    if not course:
+        err_msg = "Không tìm thấy khóa học!"
+        
+    return render_template('course_detail.html', course=course, progress=35)
+
+@app.route('/courses/create', methods=['GET', 'POST'])
+def create_course():
+    err_msg = ""
+    #Xóa các comment ở dưới nếu muốn kiểm tra đăng nhập và quyền
+    # if not current_user.is_authenticated:
+    #     return redirect('/login')
+
+    # if current_user.role != UserRole.TEACHER:
+    #     err_msg = "Yêu cầu tài khoản với quyền là giảng viên"
+
+    categories = dao.get_categories()
+    
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        price = request.form.get('price')
+        category_id = request.form.get('category_id')
+        description = request.form.get('description')
+
+        if not name or not category_id:
+            err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
+        else:
+            try:
+                new_course = dao.create_course(
+                    name=name,
+                    price=price,
+                    category_id=category_id,
+                    description=description,
+                    user_id=current_user.id
+                )
+                return redirect(f'/courses/{new_course.id}')
+            except Exception as ex:
+                db.session.rollback()
+                print(ex)
+                err_msg = "Có lỗi xảy ra khi đăng khóa học. Vui lòng thử lại sau!"
+    return render_template('create_course.html', categories=categories, err_msg=err_msg)
 
 @login.user_loader
 def get_user(user_id):

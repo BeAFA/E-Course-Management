@@ -1,9 +1,135 @@
-{%extends 'layout/base.html'%}
-{%block content%}
-<body>
-<h1>Hello World</h1>
-<a href="/login">
-    <button type="button" class="btn btn-primary">Primary</button>
-</a>
-</body>
-{%endblock%}
+{% extends 'layout/base.html' %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="hero-copy">
+        <span class="eyebrow">Học mọi lúc, mọi nơi</span>
+        <h1>E Course Website</h1>
+        <p>Nền tảng học trực tuyến giúp bạn tiếp cận các khóa học chất lượng, cùng cộng đồng học viên trao đổi trên
+            diễn đàn và theo dõi tiến độ học tập của riêng mình.</p>
+        <a href="#popular" class="btn-primary">
+            Khám phá khóa học
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+            </svg>
+        </a>
+    </div>
+    <div class="hero-visual">
+        <figure>
+            <div class="hero-frame">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="13" rx="1.5" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                    <path d="M7 10l3 3 6-6" stroke="#D99B3F" />
+                </svg>
+            </div>
+            <figcaption>Giới thiệu trang web</figcaption>
+        </figure>
+    </div>
+</section>
+
+<section class="popular" id="popular">
+    <div class="section-heading">
+        <span>Các khóa học phổ biến</span>
+    </div>
+
+    <div class="carousel">
+        <button class="carousel-arrow" id="prevBtn" type="button" aria-label="Khóa học trước">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+            </svg>
+        </button>
+
+        <div class="carousel-track" id="track">
+            {% if courses %}
+            {% for course in courses %}
+            <a href="{{ url_for('course_detail', course_id=course.id) }}" class="course-card-link"
+                style="text-decoration: none; color: inherit; display: block;">
+                <article class="course-card">
+                    <div class="card-media media-{{ (loop.index0 % 3) + 1 }}">
+                        <span class="level-badge beginner">
+                            {{ course.category.name if course.category else 'Khóa học' }}
+                        </span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#4C8B67" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="14" rx="2" />
+                            <path d="M7 21h10" />
+                            <path d="M9 21v-3" />
+                            <path d="M15 21v-3" />
+                        </svg>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-top-row">
+                            <span class="price">
+                                {% if course.price %}
+                                {{ "{:,.0f}".format(course.price).replace(',', '.') }}đ
+                                {% else %}
+                                Miễn phí
+                                {% endif %}
+                            </span>
+                            <span class="stars" aria-label="5 trên 5 sao">
+                                <svg class="filled" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.7 21l1.2-6.9-5-4.9 7-1z" />
+                                </svg>
+                                <svg class="filled" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.7 21l1.2-6.9-5-4.9 7-1z" />
+                                </svg>
+                                <svg class="filled" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.7 21l1.2-6.9-5-4.9 7-1z" />
+                                </svg>
+                                <svg class="filled" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.7 21l1.2-6.9-5-4.9 7-1z" />
+                                </svg>
+                                <svg class="filled" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.7 21l1.2-6.9-5-4.9 7-1z" />
+                                </svg>
+                            </span>
+                        </div>
+
+                        <h3 class="course-name">{{ course.name }}</h3>
+
+                        <p class="student-count">{{ course.registered_courses|length }} học viên</p>
+
+                        <div class="card-footer">
+                            <span class="instructor-avatar">
+                                {{ course.user.name[0] | upper if course.user and course.user.name else 'T' }}
+                            </span>
+                            <span class="instructor-name">
+                                {{ course.user.name if course.user else 'Giảng viên' }}
+                            </span>
+                        </div>
+                    </div>
+                </article>
+            </a>
+            {% endfor %}
+            {% else %}
+            <p style="text-align: center; width: 100%; padding: 2rem;">Hiện chưa có khóa học nào được đăng tải.</p>
+            {% endif %}
+        </div>
+
+        <button class="carousel-arrow" id="nextBtn" type="button" aria-label="Khóa học tiếp theo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="carousel-dots" id="dots"></div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+{% endblock %}

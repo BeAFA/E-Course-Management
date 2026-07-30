@@ -1,0 +1,117 @@
+{% extends 'layout/base.html' %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="course-banner">
+    <h1 class="course-title">{{ course.name | default('Tên khóa học') }}</h1>
+    <div class="progress-box">
+        <span>Tiến độ hoàn thành:</span>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;"></div>
+        </div>
+        <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
+    </div>
+</section>
+
+<main class="main-container">
+    <section class="course-intro-section">
+        <div class="intro-left">
+            <h2 class="intro-title">Giới thiệu khóa học</h2>
+            <p class="intro-description">
+                {{ course.description | default('Hiện chưa có mô tả chi tiết cho khóa học này.') }}
+            </p>
+        </div>
+        <div class="intro-right">
+            <button type="button" class="btn-ask-teacher" id="btnAskTeacher">
+                <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
+            </button>
+        </div>
+    </section>
+
+    <div class="course-modules" id="courseModules">
+        <div class="module-card">
+            <div class="module-header" data-toggle="accordion">
+                <span class="module-title">
+                    <i class="fa-solid fa-book-open"></i> Bài giảng
+                </span>
+                <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+            </div>
+            <div class="module-body">
+                {% if course.lessons and course.lessons|length > 0 %}
+                    {% for lesson in course.lessons %}
+                    <div class="lesson-item">
+                        <a class="lesson-link" data-type="doc" data-title="{{ lesson.name }}">
+                            {{ lesson.name }}
+                        </a>
+                        {% if lesson.description %}
+                            <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
+                                {{ lesson.description }}
+                            </span>
+                        {% else %}
+                            <span class="status-badge video">Bài học</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
+                        Hiện chưa có bài giảng được đăng lên
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="module-card">
+            <div class="module-header" data-toggle="accordion">
+                <span class="module-title">
+                    <i class="fa-solid fa-pen-to-square"></i> Bài tập / Bài kiểm tra
+                </span>
+                <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+            </div>
+            <div class="module-body">
+                {% set total_tests = namespace(count=0) %}
+                {% if course.lessons %}
+                    {% for lesson in course.lessons %}
+                        {% set total_tests.count = total_tests.count + (lesson.tests|length) %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if total_tests.count > 0 %}
+                    {% for lesson in course.lessons %}
+                        {% for test in lesson.tests %}
+                        <div class="lesson-item">
+                            <a class="lesson-link" data-type="quiz" data-title="{{ test.name }}">
+                                {{ test.name }}
+                                <small style="color: #64748b; font-size: 0.85em;">(Thuộc: {{ lesson.name }})</small>
+                            </a>
+                            
+                            {% if test.total_score %}
+                                <span class="status-badge score">Điểm tối đa: {{ test.total_score }}</span>
+                            {% else %}
+                                <span class="status-badge pending">Chưa hoàn thành</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
+                        Hiện chưa có bài tập hay bài kiểm tra được đăng lên
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</main>
+
+<div class="ai-assistant-wrapper">
+    <button type="button" class="btn-ai-chat" id="btnAiChat">
+        Hỏi đáp<br>tự động<br>với AI
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
+{% endblock %}
