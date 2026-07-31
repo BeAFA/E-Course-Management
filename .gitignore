@@ -219,4 +219,5 @@ __marimo__/
 
 .idea/
 
-/ecourseapp/credentials/drive_key.json
+/ecourseapp/credentials/
+/ecourseapp/one_time_run.py
