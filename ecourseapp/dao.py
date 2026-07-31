@@ -1,5 +1,5 @@
 from werkzeug.security import check_password_hash
-from models import User, Course, Category
+from models import User, Course, Category, Chapter, UserRole
 from __init__ import db
 
 
@@ -42,3 +42,16 @@ def create_course(name, price, category_id, description, user_id):
     db.session.add(course)
     db.session.commit()
     return course
+
+def get_chapter_by_id(chapter_id):
+    return Chapter.query.get(chapter_id)
+
+def is_course_owner(user, course):
+    if not user or not course:
+        return False
+    return user.role == UserRole.TEACHER and course.teacher_id == user.id
+
+def is_chapter_owner(user, chapter):
+    if not user or not chapter:
+        return False
+    return is_course_owner(user, chapter.course)

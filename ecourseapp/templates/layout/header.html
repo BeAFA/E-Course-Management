@@ -2,7 +2,7 @@
 <header>
     <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
         <div class="container-fluid">
-            <a href="/" class="navbar-brand" href="javascript:void(0)"><img
+            <a href="/" class="navbar-brand"><img
                     src="/static/img/logo.png"
                     width="20%" height="20%" alt="E-Course"> E-Course</a>
             <div class="collapse navbar-collapse flex-row-reverse" id="mynavbar">
@@ -12,6 +12,14 @@
                         Chào {{ current_user.name }}!
                     </button>
                 </a>
+                {% if current_user.role.value == 'TEACHER' %}
+                <!-- ==================== hardcode ============================ -->
+                <a href="/courses/1/chapters" class="btn">
+                    <button class="btn btn-outline-light mr">
+                        <i class="fa-solid fa-user-plus"></i> Danh sách chương
+                    </button>
+                </a>
+                {% endif %}
                 <a href="/logout" class="btn">
                     <button class="btn btn-outline-light mr">
                         <img src="https://cdn-icons-png.flaticon.com/128/1286/1286907.png" width="25">

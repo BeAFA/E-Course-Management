@@ -1,0 +1,16 @@
+{%extends 'layout/base.html'%}
+{%block content%}
+<link rel="stylesheet" href="/static/css/form.css">
+<body>
+{% for lesson in lessons %}
+<div class="card" style="width:400px">
+    <div class="card-body">
+        <h4 class="card-title">{{ lesson.title }}</h4>
+        <a href="/chapters/{{ chapter_id }}/lessons/add" class="btn btn-primary">
+            <i class="fa-solid fa-user-plus"></i> Tạo bài giảng
+        </a>
+    </div>
+</div>
+{% endfor %}
+</body>
+{%endblock%}

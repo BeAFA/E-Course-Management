@@ -11,31 +11,31 @@
         <div>Email:</div>
         <input type="email" name="email" value="{{ current_user.email }}" disabled>
         <div>Trình độ:</div>
-            <div class="input-group mt-3 mb-3">
-                <button id="levelButton"
-                        type="button"
-                        class="btn btn-primary dropdown-toggle"
-                        data-bs-toggle="dropdown">
-                    {{ current_user.level.value if current_user.level else "Chọn trình độ" }}
-                </button>
-                <ul class="dropdown-menu">
-                    {% for level in levels %}
-                    <li>
-                        <a class="dropdown-item"
-                           data-level="{{ level.value }}">
-                            {{ level.value }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <input type="hidden" name="level" id="levelInput"
-                       value="{{ current_user.level.value if current_user.level else '' }}">
-            </div>
-            <div>Ngành:</div>
-            <input type="text" name="major" value="{{ current_user.major if current_user.major else '' }}">
-            <button type="submit" class="btn btn-primary">Cập nhật thông tin</button>
-            <a href="/profile/updatepass" class="btn btn-primary mt-3"> Đổi mật khẩu</a>
-        </form>
-    </div>
+        <div class="input-group mt-3 mb-3">
+            <button id="levelButton"
+                    type="button"
+                    class="btn btn-primary dropdown-toggle"
+                    data-bs-toggle="dropdown">
+                {{ current_user.level.value if current_user.level else "Chọn trình độ" }}
+            </button>
+            <ul class="dropdown-menu">
+                {% for level in levels %}
+                <li>
+                    <a class="dropdown-item"
+                       data-level="{{ level.value }}">
+                        {{ level.value }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            <input type="hidden" name="level" id="levelInput"
+                   value="{{ current_user.level.value if current_user.level else '' }}">
+        </div>
+        <div>Ngành:</div>
+        <input type="text" name="major" value="{{ current_user.major if current_user.major else '' }}">
+        <button type="submit" class="btn btn-primary">Cập nhật thông tin</button>
+        <a href="/profile/updatepass" class="btn btn-primary mt-3"> Đổi mật khẩu</a>
+    </form>
+</div>
 </body>
 {%endblock%}
