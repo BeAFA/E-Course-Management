@@ -1,5 +1,5 @@
 from werkzeug.security import check_password_hash
-from models import User, Course, Category, Chapter, UserRole
+from models import User, Course, Category, Chapter, UserRole, Lesson
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from __init__ import db
@@ -48,6 +48,9 @@ def create_course(name, price, category_id, description, user_id):
 def get_chapter_by_id(chapter_id):
     return Chapter.query.get(chapter_id)
 
+def get_lesson_by_id(lesson_id):
+    return Lesson.query.get(lesson_id)
+
 def is_course_owner(user, course):
     if not user or not course:
         return False
@@ -58,6 +61,11 @@ def is_chapter_owner(user, chapter):
         return False
     return is_course_owner(user, chapter.course)
 
+def is_lesson_owner(user, lesson):
+    if not user or not lesson:
+        return False
+    return is_chapter_owner(user, lesson.chapter)
+  
 def get_admin_dashboard_stats():
     commission_record = models.Commission.query.first()
     total_commission = commission_record.total_amount if commission_record else 0.0

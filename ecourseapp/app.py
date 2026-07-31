@@ -1,11 +1,13 @@
 import os
+import requests
 from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import render_template, request, redirect
+from flask import render_template, request, redirect, Response, stream_with_context
+from google.auth.transport.requests import Request as GoogleAuthRequest
 from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login
-from services.drive_service import upload_file
+from services.drive_service import upload_file, credentials
 from models import User, UserRole, Level, Lesson, Chapter, Course 
 import dao
 
@@ -215,6 +217,36 @@ def chapters(course_id):
     return render_template("chapter.html", chapters=chapter_list, course_id=course_id)
 
 
+@app.route('/courses/<int:course_id>/chapters/add', methods=["GET", "POST"])
+def add_chapters(course_id):
+    course = dao.get_course_by_id(course_id)
+    if not current_user.is_authenticated or not dao.is_course_owner(current_user, course):
+        return redirect("/")
+
+    if request.method == "POST":
+        name = request.form.get("name")
+        description = request.form.get("description")
+
+        chapter = Chapter(
+            name=name,
+            description=description,
+            course_id=course_id,
+        )
+
+        try:
+            db.session.add(chapter)
+            db.session.commit()
+            return redirect(f"/courses/{course_id}/chapters")
+
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return "Upload failed"
+
+    chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
+    return render_template("create_chapter.html", chapters=chapter_list, course_id=course_id)
+
+
 @app.route('/chapters/<int:chapter_id>/lessons')
 def lessons(chapter_id):
     chapter = dao.get_chapter_by_id(chapter_id)
@@ -231,19 +263,24 @@ def add_lesson(chapter_id):
         return redirect("/")
 
     if request.method == "POST":
+        os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+
         video = request.files.get("video")
         video_drive_id = None
         video_url = None
-        os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
         if video and video.filename:
             filename = secure_filename(video.filename)
             filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
             video.save(filepath)
-            video_drive_id, video_url = upload_file(
-                filepath,
-                filename
-            )
+            video_drive_id, video_url = upload_file(filepath, filename)
             os.remove(filepath)
+
+            if video_drive_id is None:
+                return render_template(
+                    "create_lesson.html",
+                    chapter_id=chapter_id,
+                    err_msg="Tải video lên Drive thất bại, vui lòng thử lại."
+                )
 
         pdf_file = request.files.get("pdf")
         file_drive_id = None
@@ -255,7 +292,12 @@ def add_lesson(chapter_id):
             file_drive_id, file_url = upload_file(filepath, filename)
             os.remove(filepath)
 
-
+            if file_drive_id is None:
+                return render_template(
+                    "create_lesson.html",
+                    chapter_id=chapter_id,
+                    err_msg="Tải tài liệu PDF lên Drive thất bại, vui lòng thử lại."
+                )
 
         lesson = Lesson(
             chapter_id=chapter_id,
@@ -275,10 +317,55 @@ def add_lesson(chapter_id):
         except Exception as ex:
             db.session.rollback()
             print(ex)
-            return "Upload failed"
+            return render_template(
+                "create_lesson.html",
+                chapter_id=chapter_id,
+                err_msg="Lưu bài học thất bại, vui lòng thử lại."
+            )
+
     return render_template("create_lesson.html", chapter_id=chapter_id)
 
 
-    
+@app.route("/lessons/<int:lesson_id>", methods=["GET", "POST"])
+def lesson_detail(lesson_id):
+    lesson = dao.get_lesson_by_id(lesson_id)
+    if not current_user.is_authenticated or not dao.is_lesson_owner(current_user, lesson):
+        return redirect("/")
+    return render_template("lesson_detail.html", lesson=lesson)
+
+
+@app.route("/media/video/<file_id>")
+def stream_video(file_id):
+    # Làm mới access token nếu đã hết hạn
+    if not credentials.valid:
+        credentials.refresh(GoogleAuthRequest())
+
+    drive_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+    headers = {"Authorization": f"Bearer {credentials.token}"}
+
+    # Chuyển tiếp header Range (để hỗ trợ tua video) từ trình duyệt sang Drive
+    range_header = request.headers.get("Range")
+    if range_header:
+        headers["Range"] = range_header
+
+    r = requests.get(drive_url, headers=headers, stream=True)
+
+    resp = Response(
+        stream_with_context(r.iter_content(chunk_size=8192)),
+        status=r.status_code,
+        content_type=r.headers.get("Content-Type", "video/mp4"),
+    )
+
+    if "Content-Range" in r.headers:
+        resp.headers["Content-Range"] = r.headers["Content-Range"]
+    if "Content-Length" in r.headers:
+        resp.headers["Content-Length"] = r.headers["Content-Length"]
+
+    resp.headers["Accept-Ranges"] = "bytes"
+    resp.headers["Content-Disposition"] = "inline"   # ép phát trực tiếp, không tải file
+
+    return resp
+
+
 if __name__ == '__main__':
     app.run(debug=True)

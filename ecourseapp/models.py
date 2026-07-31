@@ -113,6 +113,8 @@ class Course(Base):
 
 
 # ================= Course - Tag =================
+# Nếu bảng trung gian không cần thêm field nào và chỉ dùng để nối, SQLAlchemy cho phép dùng secondary=
+# (association table đơn giản, không cần model riêng) — gọn hơn là tạo hẳn 1 class như CourseTag.
 class CourseTag(Base):
     __tablename__ = "course_tag"
 
@@ -297,6 +299,8 @@ class PaymentHistory(Base):
     user = db.relationship("User", back_populates="payments")
     course = db.relationship("Course", back_populates="payments")
 
+    
+# ================= Commission =================
 class Commission(Base):
     __tablename__ = "commission"
 
@@ -315,8 +319,8 @@ class Commission(Base):
     
 # cd vào thư mục ecourseapp rồi chạy python seed_data.py trong Command Prompt để tạo bảng và tạo dữ liệu mẫu
 
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-
-        db.session.commit()
+# if __name__ == "__main__":
+#     with app.app_context():
+#         db.create_all()
+#
+#         db.session.commit()
