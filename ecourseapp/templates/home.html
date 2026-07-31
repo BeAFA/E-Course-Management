@@ -1,11 +1,6 @@
 {% extends 'layout/base.html' %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
-{% endblock %}
-
 {% block content %}
-
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 <section class="hero">
     <div class="hero-copy">
         <span class="eyebrow">Học mọi lúc, mọi nơi</span>
@@ -127,9 +122,5 @@
 
     <div class="carousel-dots" id="dots"></div>
 </section>
-
-{% endblock %}
-
-{% block extra_js %}
 <script src="{{ url_for('static', filename='js/home.js') }}"></script>
 {% endblock %}
