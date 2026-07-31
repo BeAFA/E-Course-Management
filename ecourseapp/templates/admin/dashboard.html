@@ -1,0 +1,201 @@
+{% extends 'admin/master.html' %}
+
+{% block head_css %}
+{{ super() }}
+<style>
+    .dashboard-container {
+        padding: 20px;
+        background-color: #f8f9fa;
+        font-family: Arial, sans-serif;
+    }
+    .card-box {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .stat-card {
+        text-align: center;
+        border: 1px solid #ccc;
+        padding: 15px;
+        background: #fff;
+    }
+    .stat-title {
+        font-size: 16px;
+        color: #333;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    .stat-value {
+        font-size: 22px;
+        font-weight: bold;
+        color: #000;
+    }
+    .stat-sub {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        display: flex;
+        justify-content: space-around;
+    }
+    .table-custom th {
+        background-color: #a6a6a6 !important;
+        color: #333;
+        text-align: center;
+    }
+    .table-custom td {
+        text-align: center;
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="dashboard-container">
+    <h3 class="mb-3">Quản lý khóa học và người dùng</h3>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-title">Tổng doanh thu</div>
+                <div class="stat-value text-primary">{{ "{:,.0f}".format(stats.total_commission) }} đ</div>
+                <div class="stat-sub">&nbsp;</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-title">Tổng người dùng</div>
+                <div class="stat-value">{{ stats.users.total }} người</div>
+                <div class="stat-sub">
+                    <span>{{ stats.users.students }} học viên</span>
+                    <span>{{ stats.users.teachers }} giảng viên</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-title">Tổng khóa học</div>
+                <div class="stat-value">{{ stats.courses.total }} khóa</div>
+                <div class="stat-sub">
+                    <span>{{ stats.courses.paid }} trả phí</span>
+                    <span>{{ stats.courses.free }} miễn phí</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-box">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0">Biểu đồ doanh thu</h4>
+            <form method="GET" action="" class="form-inline">
+                {% if kw %}<input type="hidden" name="kw" value="{{ kw }}">{% endif %}
+                {% if sort_by %}<input type="hidden" name="sort_by" value="{{ sort_by }}">{% endif %}
+                <select name="days" class="form-control" onchange="this.form.submit()">
+                    <option value="7" {% if days == 7 %}selected{% endif %}>7 ngày qua</option>
+                    <option value="30" {% if days == 30 %}selected{% endif %}>30 ngày qua</option>
+                </select>
+            </form>
+        </div>
+        <div style="height: 300px;">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card-box">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="m-0">Quản lý dữ liệu tổng hợp</h4>
+            <form method="GET" action="" class="form-inline">
+                {% if days %}<input type="hidden" name="days" value="{{ days }}">{% endif %}
+                <input type="text" name="kw" value="{{ kw or '' }}" class="form-control mr-2" placeholder="Tìm kiếm khóa học...">
+                <select name="sort_by" class="form-control mr-2" onchange="this.form.submit()">
+                    <option value="revenue_asc" {% if sort_by == 'revenue_asc' %}selected{% endif %}>Doanh thu tăng dần</option>
+                    <option value="revenue_desc" {% if sort_by == 'revenue_desc' %}selected{% endif %}>Doanh thu giảm dần</option>
+                    <option value="student_desc" {% if sort_by == 'student_desc' %}selected{% endif %}>Học viên đông nhất</option>
+                </select>
+                <button type="submit" class="btn btn-secondary">Lọc</button>
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-custom">
+                <thead>
+                    <tr>
+                        <th>Mã KH</th>
+                        <th>Tên khóa học</th>
+                        <th>Giảng viên</th>
+                        <th>Loại</th>
+                        <th>Số học viên</th>
+                        <th>Hoa hồng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in table_data.courses %}
+                    <tr>
+                        <td>{{ item.course_id }}</td>
+                        <td>{{ item.course_name }}</td>
+                        <td>{{ item.teacher_name }}</td>
+                        <td>{{ item.is_paid }}</td>
+                        <td>{{ item.student_count }}</td>
+                        <td>{{ "{:,.0f}".format(item.commission) }} đ</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">Không có dữ liệu khóa học.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if table_data.total_pages > 1 %}
+        <nav class="d-flex justify-content-center mt-3">
+            <ul class="pagination">
+                {% for page_num in range(1, table_data.total_pages + 1) %}
+                <li class="page-item {% if page_num == table_data.current_page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.index', page=page_num, kw=kw, sort_by=sort_by, days=days) }}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block tail_js %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    (function() {
+        const chartLabels = JSON.parse('{{ chart_data.labels | tojson | safe }}');
+        const chartDataValues = JSON.parse('{{ chart_data.data | tojson | safe }}');
+
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Doanh thu (nghìn đồng)',
+                    data: chartDataValues,
+                    borderColor: '#2b6cb0',
+                    backgroundColor: 'rgba(43, 108, 176, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    })();
+</script>
+{% endblock %}

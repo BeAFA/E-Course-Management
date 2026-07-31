@@ -9,6 +9,10 @@ from services.drive_service import upload_file
 from models import User, UserRole, Level, Lesson, Chapter
 import dao
 
+import admin
+
+
+
 TEMP_UPLOAD_DIR = "temp"
 
 
@@ -36,6 +40,8 @@ def login_my_user():
                 return redirect('/')
             if user.role == UserRole.TEACHER:
                 return redirect('/')
+            elif user.role == UserRole.ADMIN:
+                return redirect('/admin/')
             return redirect('/')
         else:
             err_msg = "Tài khoản hoặc mật khẩu không đúng!"
@@ -224,5 +230,6 @@ def add_lesson(chapter_id):
     return render_template("create_lesson.html", chapter_id=chapter_id)
 
 
+    
 if __name__ == '__main__':
     app.run(debug=True)
