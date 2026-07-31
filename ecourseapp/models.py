@@ -101,6 +101,8 @@ class Course(Base):
 
 
 # ================= Course - Tag =================
+# Nếu bảng trung gian không cần thêm field nào và chỉ dùng để nối, SQLAlchemy cho phép dùng secondary=
+# (association table đơn giản, không cần model riêng) — gọn hơn là tạo hẳn 1 class như CourseTag.
 class CourseTag(Base):
     __tablename__ = "course_tag"
 

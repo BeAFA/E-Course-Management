@@ -1,0 +1,23 @@
+{%extends 'layout/base.html'%}
+{%block content%}
+<link href="/static/css/form.css" rel="stylesheet">
+<body>
+{% if err_msg %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>Lỗi:</strong> {{ err_msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+<div class="box">
+    <h2>Tạo chương mới</h2>
+    <form action="/courses/{{ course_id }}/chapters/add" method="POST">
+        <input type="text" name="name" placeholder="Tiêu đề" required>
+        <input type="text" name="description" placeholder="Miêu tả">
+        <button type="submit">Tạo khóa học</button>
+    </form>
+    <div class="link">
+        <a href="/courses/{{ course_id }}/chapters">Hủy</a>
+    </div>
+</div>
+</body>
+{%endblock%}

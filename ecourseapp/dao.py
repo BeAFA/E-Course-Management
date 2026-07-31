@@ -1,5 +1,5 @@
 from werkzeug.security import check_password_hash
-from models import User, Course, Chapter, UserRole
+from models import User, Course, Chapter, UserRole, Lesson
 
 
 def auth_user(email, password):
@@ -17,6 +17,9 @@ def get_course_by_id(course_id):
 def get_chapter_by_id(chapter_id):
     return Chapter.query.get(chapter_id)
 
+def get_lesson_by_id(lesson_id):
+    return Lesson.query.get(lesson_id)
+
 def is_course_owner(user, course):
     if not user or not course:
         return False
@@ -26,3 +29,8 @@ def is_chapter_owner(user, chapter):
     if not user or not chapter:
         return False
     return is_course_owner(user, chapter.course)
+
+def is_lesson_owner(user, lesson):
+    if not user or not lesson:
+        return False
+    return is_chapter_owner(user, lesson.chapter)
