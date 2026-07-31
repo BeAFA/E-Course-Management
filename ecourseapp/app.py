@@ -8,12 +8,10 @@ from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login
 from services.drive_service import upload_file, credentials
-from models import User, UserRole, Level, Lesson, Chapter, Course 
+from models import User, UserRole, Level, Lesson, Chapter, Course
 import dao
 
 import admin
-
-
 
 TEMP_UPLOAD_DIR = "temp"
 
@@ -26,19 +24,21 @@ def home():
     courses = dao.get_courses(kw=kw, category_id=category_id)
     return render_template('home.html', courses=courses)
 
+
 @app.route('/courses/<int:course_id>')
 def course_detail(course_id):
     course = dao.get_course_by_id(course_id)
-    
+
     if not course:
         err_msg = "Không tìm thấy khóa học!"
-        
+
     return render_template('course_detail.html', course=course, progress=35)
+
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 def create_course():
     err_msg = ""
-    #Xóa các comment ở dưới nếu muốn kiểm tra đăng nhập và quyền
+    # Xóa các comment ở dưới nếu muốn kiểm tra đăng nhập và quyền
     # if not current_user.is_authenticated:
     #     return redirect('/login')
 
@@ -46,7 +46,6 @@ def create_course():
     #     err_msg = "Yêu cầu tài khoản với quyền là giảng viên"
 
     categories = dao.get_categories()
-    
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -71,6 +70,7 @@ def create_course():
                 print(ex)
                 err_msg = "Có lỗi xảy ra khi đăng khóa học. Vui lòng thử lại sau!"
     return render_template('create_course.html', categories=categories, err_msg=err_msg)
+
 
 @login.user_loader
 def get_user(user_id):
@@ -161,12 +161,12 @@ def update_profile():
         return redirect("/login")
 
     levels = list(Level)
-
-    current_user.name = request.form["name"]
-    current_user.level = Level(request.form["level"])
-    current_user.major = request.form["major"]
-
     try:
+        current_user.name = request.form["name"]
+        if request.form.get("level"):
+            current_user.level = Level(request.form.get("level"))
+        current_user.major = request.form["major"]
+
         db.session.commit()
         return redirect('/profile')
     except Exception as ex:
@@ -177,35 +177,38 @@ def update_profile():
         return render_template("profile.html", levels=levels, err_msg=err_msg)
 
 
-@app.route('/profile/updatepass', methods=["POST"])
+@app.route('/profile/updatepass', methods=["GET", "POST"])
 def update_password():
     if not current_user.is_authenticated:
         return redirect("/login")
 
-    oldpassword = request.form.get('oldpassword')
-    newpassword = request.form.get("newpassword")
-    confirm = request.form.get("confirm")
+    if request.method == "POST":
+        oldpassword = request.form.get('oldpassword')
+        newpassword = request.form.get("newpassword")
+        confirm = request.form.get("confirm")
 
-    if check_password_hash(current_user.password, oldpassword):
-        if check_password_hash(current_user.password, newpassword):
-            err_msg = "Mật khẩu mới phải khác mật khẩu cũ"
-            return render_template("change_password.html", err_msg=err_msg)
-        if newpassword != confirm:
-            err_msg = "Xác nhận mật khẩu không đúng"
-            return render_template("change_password.html", err_msg=err_msg)
-        try:
-            current_user.password = generate_password_hash(newpassword)
-            db.session.commit()
-            return redirect('/profile')
-        except Exception as ex:
-            db.session.rollback()
-            print(ex)
+        if check_password_hash(current_user.password, oldpassword):
+            if check_password_hash(current_user.password, newpassword):
+                err_msg = "Mật khẩu mới phải khác mật khẩu cũ"
+                return render_template("change_password.html", user=current_user, err_msg=err_msg)
+            if newpassword != confirm:
+                err_msg = "Xác nhận mật khẩu không đúng"
+                return render_template("change_password.html", user=current_user, err_msg=err_msg)
+            try:
+                current_user.password = generate_password_hash(newpassword)
+                db.session.commit()
+                return redirect('/profile')
+            except Exception as ex:
+                db.session.rollback()
+                print(ex)
 
-            err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
-            return render_template("change_password.html", err_msg=err_msg)
-    else:
-        err_msg = "Mật khẩu cũ không đúng!"
-    return render_template("change_password.html", err_msg=err_msg)
+                err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
+                return render_template("change_password.html", user=current_user, err_msg=err_msg)
+        else:
+            err_msg = "Mật khẩu cũ không đúng!"
+        return render_template("change_password.html", user=current_user, err_msg=err_msg)
+
+    return render_template("change_password.html", user=current_user)
 
 
 @app.route('/courses/<int:course_id>/chapters')
@@ -362,7 +365,7 @@ def stream_video(file_id):
         resp.headers["Content-Length"] = r.headers["Content-Length"]
 
     resp.headers["Accept-Ranges"] = "bytes"
-    resp.headers["Content-Disposition"] = "inline"   # ép phát trực tiếp, không tải file
+    resp.headers["Content-Disposition"] = "inline"  # ép phát trực tiếp, không tải file
 
     return resp
 
