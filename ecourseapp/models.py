@@ -55,6 +55,9 @@ class User(Base, UserMixin):
     )
     enrollments = db.relationship("Enrollment", back_populates="user")
     payments = db.relationship("PaymentHistory", back_populates="user")
+    
+    def __str__(self):
+        return self.name
 
 
 # ================= Category =================
@@ -63,6 +66,9 @@ class Category(Base):
     name = db.Column(db.String(80), nullable=False, unique=True)
 
     courses = db.relationship("Course", back_populates="category")
+    
+    def __str__(self):
+        return self.name
 
 
 # ================= Tag =================
@@ -72,6 +78,9 @@ class Tag(Base):
     name = db.Column(db.String(80), nullable=False, unique=True)
 
     courses_tags = db.relationship("CourseTag", back_populates="tag")
+    
+    def __str__(self):
+        return self.name
 
 
 # ================= Course =================
@@ -98,6 +107,9 @@ class Course(Base):
     chats = db.relationship("ChatRoom", back_populates="course")
     enrollments = db.relationship("Enrollment", back_populates="course")
     payments = db.relationship("PaymentHistory", back_populates="course")
+    
+    def __str__(self):
+        return self.name
 
 
 # ================= Course - Tag =================
@@ -137,6 +149,9 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    
+    def __str__(self):
+        return self.name
 
 
 # ================= Lesson =================
@@ -153,6 +168,8 @@ class Lesson(Base):
 
     chapter = db.relationship("Chapter", back_populates="lessons")
 
+    def __str__(self):
+        return self.name
 
 # ================= Test =================
 class Test(Base):
@@ -173,6 +190,8 @@ class Test(Base):
     )
     user_tests = db.relationship("UserTest", back_populates="test")
 
+    def __str__(self):
+        return self.name
 
 # ================= Question =================
 class Question(Base):
@@ -190,6 +209,8 @@ class Question(Base):
         passive_deletes=True,
     )
 
+    def __str__(self):
+        return self.content[0:15] + "..."
 
 # ================= Choice =================
 class Choice(Base):
@@ -200,6 +221,9 @@ class Choice(Base):
     is_true = db.Column(db.Boolean, default=False, nullable=False)
 
     question = db.relationship("Question", back_populates="choices")
+    
+    def __str__(self):
+        return self.answer[:15] + "..."
 
 
 # ================= User - Test =================
@@ -230,6 +254,9 @@ class ChatRoom(Base):
 
     __table_args__ = (db.UniqueConstraint("student_id", "teacher_id", "course_id"),)
 
+    def __str__(self):
+        return self.student.name + "_" + self.teacher.name
+    
 
 # ================= ChatMessage =================
 class ChatRoomMessage(Base):
@@ -241,6 +268,7 @@ class ChatRoomMessage(Base):
 
     sender = db.relationship("User", foreign_keys=[sender_id], back_populates="messages")
     chat_room = db.relationship("ChatRoom", back_populates="messages")
+
 
 
 # ================= Registered Class =================
@@ -271,6 +299,24 @@ class PaymentHistory(Base):
     user = db.relationship("User", back_populates="payments")
     course = db.relationship("Course", back_populates="payments")
 
+    
+# ================= Commission =================
+class Commission(Base):
+    __tablename__ = "commission"
+
+    total_amount = db.Column(db.Float, default=0.0, nullable=False)
+
+    @classmethod
+    def add_commission(cls, amount):
+        commission = cls.query.first()
+        if not commission:
+            commission = cls(total_amount=amount)
+            db.session.add(commission)
+        else:
+            commission.total_amount += amount
+        db.session.commit()
+        return commission.total_amount
+    
 # cd vào thư mục ecourseapp rồi chạy python seed_data.py trong Command Prompt để tạo bảng và tạo dữ liệu mẫu
 
 # if __name__ == "__main__":
