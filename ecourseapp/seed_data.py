@@ -12,6 +12,7 @@ from models import (
     ChatRoom, ChatRoomMessage,
     Enrollment,
     PaymentHistory, PaymentMethod,
+    Commission
 )
 
 
@@ -294,6 +295,12 @@ def seed():
     db.session.add_all(payments)
     db.session.commit()
 
+    # ================= COMMISSION =================
+    commission = Commission()
+    db.session.add_all(commission)
+    db.session.commit()
+    
+    
     print("Seed dữ liệu mẫu thành công!")
 
 
