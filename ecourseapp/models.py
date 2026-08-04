@@ -172,9 +172,10 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    tests = db.relationship(
+    test = db.relationship(
         "Test",
         back_populates="chapter",
+        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -208,10 +209,10 @@ class Test(Base):
 
     name = db.Column(db.String(80), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False)
+    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False, unique=True)
     total_score = db.Column(db.Float, nullable=True)
 
-    chapter = db.relationship("Chapter", back_populates="tests")
+    chapter = db.relationship("Chapter", back_populates="test")
 
     questions = db.relationship(
         "Question",

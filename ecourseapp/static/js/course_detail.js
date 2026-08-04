@@ -22,28 +22,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const lessonLinks = document.querySelectorAll('.lesson-link');
-    lessonLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const title = link.getAttribute('data-title') || link.textContent.trim();
-            const type = link.getAttribute('data-type');
-
-            if (type === 'video') {
-                alert(`Đang mở video bài giảng: "${title}"`);
-            } else if (type === 'quiz') {
-                alert(`Bắt đầu làm: "${title}"`);
-            } else if (type === 'essay') {
-                alert(`Khu vực nộp bài cho: "${title}"`);
-            } else if (type === 'exam') {
-                if (confirm(`Bạn chuẩn bị làm "${title}". Thời gian sẽ được tính ngay khi bắt đầu. Tiếp tục?`)) {
-                    alert('Đang tải đề thi...');
-                }
-            } else {
-                alert(`Đang mở tài liệu: "${title}"`);
-            }
-        });
-    });
+//    const lessonLinks = document.querySelectorAll('.lesson-link');
+//    lessonLinks.forEach(link => {
+//        link.addEventListener('click', (e) => {
+//            e.preventDefault();
+//            const title = link.getAttribute('data-title') || link.textContent.trim();
+//            const type = link.getAttribute('data-type');
+//
+//            if (type === 'video') {
+//                alert(`Đang mở video bài giảng: "${title}"`);
+//            } else if (type === 'quiz') {
+//                alert(`Bắt đầu làm: "${title}"`);
+//            } else if (type === 'essay') {
+//                alert(`Khu vực nộp bài cho: "${title}"`);
+//            } else if (type === 'exam') {
+//                if (confirm(`Bạn chuẩn bị làm "${title}". Thời gian sẽ được tính ngay khi bắt đầu. Tiếp tục?`)) {
+//                    alert('Đang tải đề thi...');
+//                }
+//            } else {
+//                alert(`Đang mở tài liệu: "${title}"`);
+//            }
+//        });
+//    });
 
     const btnAskTeacher = document.getElementById('btnAskTeacher');
     if (btnAskTeacher) {

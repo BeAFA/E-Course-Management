@@ -49,12 +49,19 @@ def get_my_courses(teacher_id):
 def get_course_by_id(course_id):
     return models.Course.query.get(course_id)
 
+def get_course_tag(course_id):
+    course_tags = (
+        db.session.query(models.CourseTag)
+        .filter(models.CourseTag.course_id == course_id)
+        .all()
+    )
+    return [ct.tag.name for ct in course_tags]
 
 def get_categories():
     return models.Category.query.all()
 
 
-def create_course(name, price, category_id, description, teacher_id, img_drive_id, img_url):
+def create_course(name, price, category_id, description, teacher_id, img_drive_id, img_url, tag_ids=None):
     """Tạo và lưu khóa học mới vào cơ sở dữ liệu"""
     course = models.Course(
         name=name,
@@ -66,6 +73,13 @@ def create_course(name, price, category_id, description, teacher_id, img_drive_i
         img_url=img_url
     )
     db.session.add(course)
+    db.session.flush()
+
+    # if tag_ids:
+    #     for tag_id in tag_ids:
+    #         course_tag = models.CourseTag(course_id=course.id, tag_id=int(tag_id))
+    #         db.session.add(course_tag)
+
     db.session.commit()
     return course
 

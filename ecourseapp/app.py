@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login
 from services.drive_service import upload_file, credentials
-from models import User, UserRole, Level, Lesson, Chapter, Course
+from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag
 import dao
 
 import admin
@@ -215,7 +215,10 @@ def get_my_course():
     if not current_user.is_authenticated and current_user.role != UserRole.TEACHER:
         err_msg = "Bạn không có quyền truy cập!"
         return render_template("home.html", err_msg=err_msg)
-    return render_template("my_courses.html", courses=dao.get_my_courses(current_user.id))
+    courses = dao.get_my_courses(current_user.id)
+    for c in courses:
+        c.tag_names = dao.get_course_tag(c.id)
+    return render_template("my_courses.html", courses=courses)
 
 @app.route('/courses/<int:course_id>')
 def course_detail(course_id):
@@ -267,6 +270,7 @@ def create_course():
         price = request.form.get('price')
         category_id = request.form.get('category_id')
         description = request.form.get('description')
+        # tag_ids = request.form.getlist("tag_ids")
 
         img_drive_id = DEFAULT_COURSE_IMG_DRIVE_ID
         img_url = DEFAULT_COURSE_IMG_URL
@@ -283,7 +287,7 @@ def create_course():
             os.remove(filepath)
 
             if uploaded_id is None:
-                return render_template("register.html", err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
+                return render_template("create_course.html", err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
 
             # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
             img_drive_id = uploaded_id
@@ -301,6 +305,7 @@ def create_course():
                     teacher_id=current_user.id,
                     img_drive_id=img_drive_id,
                     img_url=img_url
+                    # tag_ids=tag_ids
                 )
                 return redirect(f'/courses/{new_course.id}')
             except Exception as ex:
@@ -338,7 +343,7 @@ def add_chapters(course_id):
         try:
             db.session.add(chapter)
             db.session.commit()
-            return redirect(f"/courses/{course_id}/chapters")
+            return redirect(f"/courses/{course_id}")
 
         except Exception as ex:
             db.session.rollback()
@@ -420,7 +425,7 @@ def add_lesson(chapter_id):
             os.remove(filepath)
 
             if uploaded_id is None:
-                return render_template("register.html",
+                return render_template("create_lesson.html",
                                        err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
 
             # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
