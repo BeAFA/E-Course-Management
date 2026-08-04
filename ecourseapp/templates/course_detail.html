@@ -31,20 +31,20 @@
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
-                    <i class="fa-solid fa-book-open"></i> Bài giảng
+                    <i class="fa-solid fa-book-open"></i> Chương
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
             </div>
             <div class="module-body">
-                {% if course.lessons and course.lessons|length > 0 %}
-                    {% for lesson in course.lessons %}
+                {% if course.chapters %}
+                    {% for chapter in course.chapters %}
                     <div class="lesson-item">
-                        <a class="lesson-link" data-type="doc" data-title="{{ lesson.name }}">
-                            {{ lesson.name }}
+                        <a class="lesson-link" data-type="doc" data-title="{{ chapter.name }}">
+                            {{ chapter.name }}
                         </a>
-                        {% if lesson.description %}
+                        {% if chapter.description %}
                             <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                                {{ lesson.description }}
+                                {{ chapter.description }}
                             </span>
                         {% else %}
                             <span class="status-badge video">Bài học</span>
@@ -59,45 +59,45 @@
             </div>
         </div>
 
-        <div class="module-card">
-            <div class="module-header" data-toggle="accordion">
-                <span class="module-title">
-                    <i class="fa-solid fa-pen-to-square"></i> Bài tập / Bài kiểm tra
-                </span>
-                <i class="fa-solid fa-caret-down module-toggle-icon"></i>
-            </div>
-            <div class="module-body">
-                {% set total_tests = namespace(count=0) %}
-                {% if course.lessons %}
-                    {% for lesson in course.lessons %}
-                        {% set total_tests.count = total_tests.count + (lesson.tests|length) %}
-                    {% endfor %}
-                {% endif %}
+<!--        <div class="module-card">-->
+<!--            <div class="module-header" data-toggle="accordion">-->
+<!--                <span class="module-title">-->
+<!--                    <i class="fa-solid fa-pen-to-square"></i> Bài tập / Bài kiểm tra-->
+<!--                </span>-->
+<!--                <i class="fa-solid fa-caret-down module-toggle-icon"></i>-->
+<!--            </div>-->
+<!--            <div class="module-body">-->
+<!--                {% set total_tests = namespace(count=0) %}-->
+<!--                {% if course.lessons %}-->
+<!--                    {% for lesson in course.lessons %}-->
+<!--                        {% set total_tests.count = total_tests.count + (lesson.tests|length) %}-->
+<!--                    {% endfor %}-->
+<!--                {% endif %}-->
 
-                {% if total_tests.count > 0 %}
-                    {% for lesson in course.lessons %}
-                        {% for test in lesson.tests %}
-                        <div class="lesson-item">
-                            <a class="lesson-link" data-type="quiz" data-title="{{ test.name }}">
-                                {{ test.name }}
-                                <small style="color: #64748b; font-size: 0.85em;">(Thuộc: {{ lesson.name }})</small>
-                            </a>
-                            
-                            {% if test.total_score %}
-                                <span class="status-badge score">Điểm tối đa: {{ test.total_score }}</span>
-                            {% else %}
-                                <span class="status-badge pending">Chưa hoàn thành</span>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    {% endfor %}
-                {% else %}
-                    <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-                        Hiện chưa có bài tập hay bài kiểm tra được đăng lên
-                    </div>
-                {% endif %}
-            </div>
-        </div>
+<!--                {% if total_tests.count > 0 %}-->
+<!--                    {% for lesson in course.lessons %}-->
+<!--                        {% for test in lesson.tests %}-->
+<!--                        <div class="lesson-item">-->
+<!--                            <a class="lesson-link" data-type="quiz" data-title="{{ test.name }}">-->
+<!--                                {{ test.name }}-->
+<!--                                <small style="color: #64748b; font-size: 0.85em;">(Thuộc: {{ lesson.name }})</small>-->
+<!--                            </a>-->
+<!--                            -->
+<!--                            {% if test.total_score %}-->
+<!--                                <span class="status-badge score">Điểm tối đa: {{ test.total_score }}</span>-->
+<!--                            {% else %}-->
+<!--                                <span class="status-badge pending">Chưa hoàn thành</span>-->
+<!--                            {% endif %}-->
+<!--                        </div>-->
+<!--                        {% endfor %}-->
+<!--                    {% endfor %}-->
+<!--                {% else %}-->
+<!--                    <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">-->
+<!--                        Hiện chưa có bài tập hay bài kiểm tra được đăng lên-->
+<!--                    </div>-->
+<!--                {% endif %}-->
+<!--            </div>-->
+<!--        </div>-->
     </div>
 </main>
 

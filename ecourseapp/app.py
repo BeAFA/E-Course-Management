@@ -15,6 +15,21 @@ import admin
 
 TEMP_UPLOAD_DIR = "temp"
 
+# Bạn có thể định nghĩa các hằng số này ở đầu file hoặc trong file config
+DEFAULT_AVATAR_DRIVE_ID = "1X-nx8rzQBGGg676PHve-0J-KGYpjJj-1"
+# Tạo link trực tiếp để hiển thị ảnh từ Google Drive
+DEFAULT_AVATAR_URL = f"https://drive.google.com/uc?id={DEFAULT_AVATAR_DRIVE_ID}"
+
+# Bạn có thể định nghĩa các hằng số này ở đầu file hoặc trong file config
+DEFAULT_COURSE_IMG_DRIVE_ID = "1AvAw7sucIgoV3ytOruFTTEeEt6YOQQY9"
+# Tạo link trực tiếp để hiển thị ảnh từ Google Drive
+DEFAULT_COURSE_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_COURSE_IMG_DRIVE_ID}"
+
+# Bạn có thể định nghĩa các hằng số này ở đầu file hoặc trong file config
+DEFAULT_LESSON_IMG_DRIVE_ID = "1DaVBg8l_Ze_b6CB0-4ThfxmIxpxE-ojU"
+# Tạo link trực tiếp để hiển thị ảnh từ Google Drive
+DEFAULT_LESSON_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_LESSON_IMG_DRIVE_ID}"
+
 
 @app.route('/')
 def home():
@@ -23,53 +38,6 @@ def home():
 
     courses = dao.get_courses(kw=kw, category_id=category_id)
     return render_template('home.html', courses=courses)
-
-
-@app.route('/courses/<int:course_id>')
-def course_detail(course_id):
-    course = dao.get_course_by_id(course_id)
-
-    if not course:
-        err_msg = "Không tìm thấy khóa học!"
-
-    return render_template('course_detail.html', course=course, progress=35)
-
-
-@app.route('/courses/create', methods=['GET', 'POST'])
-def create_course():
-    err_msg = ""
-    # Xóa các comment ở dưới nếu muốn kiểm tra đăng nhập và quyền
-    # if not current_user.is_authenticated:
-    #     return redirect('/login')
-
-    # if current_user.role != UserRole.TEACHER:
-    #     err_msg = "Yêu cầu tài khoản với quyền là giảng viên"
-
-    categories = dao.get_categories()
-
-    if request.method == 'POST':
-        name = request.form.get('name')
-        price = request.form.get('price')
-        category_id = request.form.get('category_id')
-        description = request.form.get('description')
-
-        if not name or not category_id:
-            err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
-        else:
-            try:
-                new_course = dao.create_course(
-                    name=name,
-                    price=price,
-                    category_id=category_id,
-                    description=description,
-                    user_id=current_user.id
-                )
-                return redirect(f'/courses/{new_course.id}')
-            except Exception as ex:
-                db.session.rollback()
-                print(ex)
-                err_msg = "Có lỗi xảy ra khi đăng khóa học. Vui lòng thử lại sau!"
-    return render_template('create_course.html', categories=categories, err_msg=err_msg)
 
 
 @login.user_loader
@@ -105,38 +73,64 @@ def login_my_user():
 def register_new_user():
     # Chỉnh sửa thêm nghiệp vụ đăng ký cho giảng viên
     if request.method == "POST":
-        name = request.form["name"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm = request.form["confirm"]
-        role = request.form["role"]
+        name = request.form.get("name")
+        email = request.form.get("email")
+        password = request.form.get("password")
+        confirm = request.form.get("confirm")
+        role = request.form.get("role")
 
+        # 1. KIỂM TRA DỮ LIỆU ĐẦU VÀO
         if password != confirm:
-            err_msg = "Xác nhận mật khẩu không khớp!"
-            return render_template("register.html", err_msg=err_msg)
-        else:
-            existing_user = User.query.filter(User.email == email).first()
-            if existing_user:
-                err_msg = "Tài khoản này đã được đăng ký"
-                return render_template("register.html", err_msg=err_msg)
-            else:
-                try:
-                    password = generate_password_hash(password)
-                    user = User(
-                        name=name,
-                        email=email,
-                        password=password,
-                        role=UserRole(role),
-                    )
-                    db.session.add(user)
-                    db.session.commit()
-                    return redirect('/login')
-                except Exception as ex:
-                    db.session.rollback()
-                    print(ex)
+            return render_template("register.html", err_msg="Xác nhận mật khẩu không khớp!")
 
-                    err_msg = "Hệ thống đã bị lỗi! Xin vui lòng thử lại sau"
-                    return render_template("register.html", err_msg=err_msg)
+        existing_user = User.query.filter(User.email == email).first()
+        if existing_user:
+            return render_template("register.html", err_msg="Tài khoản này đã được đăng ký")
+
+        # 2. XỬ LÝ HÌNH ẢNH
+        # Gán sẵn ID và URL của file user.png trên Drive của bạn làm mặc định
+        img_drive_id = DEFAULT_AVATAR_DRIVE_ID
+        img_url = DEFAULT_AVATAR_URL
+
+        img = request.files.get("img")
+
+        # Nếu người dùng có upload file ảnh mới (filename không rỗng)
+        if img and img.filename != '':
+            os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+            filename = secure_filename(img.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            img.save(filepath)
+
+            # Tải ảnh mới của người dùng lên Drive
+            uploaded_id, uploaded_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+            if uploaded_id is None:
+                return render_template("register.html", err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
+
+            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
+            img_drive_id = uploaded_id
+            img_url = uploaded_url
+
+        # 3. LƯU DATABASE
+        try:
+            hashed_password = generate_password_hash(password)
+            user = User(
+                name=name,
+                email=email,
+                password=hashed_password,
+                role=UserRole(role),
+                img_drive_id=img_drive_id,  # Sẽ lưu ID mặc định hoặc ID vừa upload
+                img_url=img_url  # Sẽ lưu URL mặc định hoặc URL vừa upload
+            )
+            db.session.add(user)
+            db.session.commit()
+            return redirect('/login')
+        except Exception as ex:
+            db.session.rollback()
+            print(f"Database error: {ex}")
+            return render_template("register.html", err_msg="Hệ thống đã bị lỗi! Xin vui lòng thử lại sau")
+
     return render_template("register.html")
 
 
@@ -209,6 +203,111 @@ def update_password():
         return render_template("change_password.html", user=current_user, err_msg=err_msg)
 
     return render_template("change_password.html", user=current_user)
+
+
+@app.route('/courses')
+def get_all_courses():
+    courses = dao.get_courses()
+    return render_template("chapter.html", courses=courses)
+
+@app.route('/courses/my_courses')
+def get_my_course():
+    if not current_user.is_authenticated and current_user.role != UserRole.TEACHER:
+        err_msg = "Bạn không có quyền truy cập!"
+        return render_template("home.html", err_msg=err_msg)
+    return render_template("my_courses.html", courses=dao.get_my_courses(current_user.id))
+
+@app.route('/courses/<int:course_id>')
+def course_detail(course_id):
+    course = dao.get_course_by_id(course_id)
+    if not course:
+        return redirect('/')
+
+    stats = dao.get_course_rating_stats(course_id)
+    ratings_page = dao.get_ratings_by_course(course_id, page=request.args.get('page', 1, type=int))
+
+    return render_template(
+        'course_detail.html',
+        course=course,
+        avg_rating=stats['avg_rating'],
+        rating_count=stats['rating_count'],
+        ratings=ratings_page.items,
+        pagination=ratings_page
+    )
+
+@app.route('/courses/<int:course_id>/rate', methods=['POST'])
+def rate_course(course_id):
+    if not current_user.is_authenticated:
+        return redirect('/login')
+
+    rating_value = int(request.form.get('rating', 5))
+    comment = request.form.get('comment')
+
+    rating, err = dao.add_or_update_rating(current_user.id, course_id, rating_value, comment)
+    if err:
+        # có thể flash message thay vì render tay
+        pass
+
+    return redirect(f'/courses/{course_id}')
+
+@app.route('/courses/create', methods=['GET', 'POST'])
+def create_course():
+    err_msg = ""
+    # Xóa các comment ở dưới nếu muốn kiểm tra đăng nhập và quyền
+    # if not current_user.is_authenticated:
+    #     return redirect('/login')
+
+    # if current_user.role != UserRole.TEACHER:
+    #     err_msg = "Yêu cầu tài khoản với quyền là giảng viên"
+
+    categories = dao.get_categories()
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        price = request.form.get('price')
+        category_id = request.form.get('category_id')
+        description = request.form.get('description')
+
+        img_drive_id = DEFAULT_COURSE_IMG_DRIVE_ID
+        img_url = DEFAULT_COURSE_IMG_URL
+
+        img = request.files.get("img")
+        if img and img.filename != '':
+            os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+            filename = secure_filename(img.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            img.save(filepath)
+
+            # Tải ảnh mới của người dùng lên Drive
+            uploaded_id, uploaded_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+            if uploaded_id is None:
+                return render_template("register.html", err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
+
+            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
+            img_drive_id = uploaded_id
+            img_url = uploaded_url
+
+        if not name or not category_id:
+            err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
+        else:
+            try:
+                new_course = dao.create_course(
+                    name=name,
+                    price=price,
+                    category_id=category_id,
+                    description=description,
+                    teacher_id=current_user.id,
+                    img_drive_id=img_drive_id,
+                    img_url=img_url
+                )
+                return redirect(f'/courses/{new_course.id}')
+            except Exception as ex:
+                db.session.rollback()
+                print(ex)
+                err_msg = "Có lỗi xảy ra khi đăng khóa học. Vui lòng thử lại sau!"
+    return render_template('create_course.html', categories=categories, err_msg=err_msg)
 
 
 @app.route('/courses/<int:course_id>/chapters')
@@ -302,6 +401,32 @@ def add_lesson(chapter_id):
                     err_msg="Tải tài liệu PDF lên Drive thất bại, vui lòng thử lại."
                 )
 
+        # 2. XỬ LÝ HÌNH ẢNH
+        # Gán sẵn ID và URL của file user.png trên Drive của bạn làm mặc định
+        img_drive_id = DEFAULT_LESSON_IMG_DRIVE_ID
+        img_url = DEFAULT_LESSON_IMG_URL
+
+        img = request.files.get("img")
+
+        # Nếu người dùng có upload file ảnh mới (filename không rỗng)
+        if img and img.filename != '':
+            os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+            filename = secure_filename(img.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            img.save(filepath)
+
+            # Tải ảnh mới của người dùng lên Drive
+            uploaded_id, uploaded_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+            if uploaded_id is None:
+                return render_template("register.html",
+                                       err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
+
+            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
+            img_drive_id = uploaded_id
+            img_url = uploaded_url
+
         lesson = Lesson(
             chapter_id=chapter_id,
             title=request.form["title"],
@@ -309,7 +434,9 @@ def add_lesson(chapter_id):
             video_url=video_url,
             file_drive_id=file_drive_id,
             file_url=file_url,
-            article=request.form.get("article")
+            article=request.form.get("article"),
+            img_drive_id=img_drive_id,
+            img_url=img_url
         )
 
         try:

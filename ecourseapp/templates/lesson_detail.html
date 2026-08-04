@@ -28,14 +28,14 @@
         {{ lesson.article | safe }}
     </div>
     {% endif %}
-    {% if lesson.file_url %}
-    <div class="lesson-file">
-        <a href="https://drive.google.com/uc?export=download&id={{ lesson.file_drive_id }}"
-           target="_blank" class="btn btn-outline-primary">
-            📄 Tải tài liệu bài học
-        </a>
-    </div>
-    {% endif %}
+<!--    {% if lesson.file_url %}-->
+<!--    <div class="lesson-file">-->
+<!--        <a href="https://drive.google.com/uc?export=download&id={{ lesson.file_drive_id }}"-->
+<!--           target="_blank" class="btn btn-outline-primary">-->
+<!--            📄 Tải tài liệu bài học-->
+<!--        </a>-->
+<!--    </div>-->
+<!--    {% endif %}-->
 </div>
 {% else %}
 <h2>Chưa có nội dung</h2>
