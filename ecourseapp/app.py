@@ -447,7 +447,7 @@ def add_lesson(chapter_id):
         try:
             db.session.add(lesson)
             db.session.commit()
-            return redirect(f"/courses/{chapter.course_id}/chapters")
+            return redirect(f"/chapters/{chapter_id}/lessons")
 
         except Exception as ex:
             db.session.rollback()

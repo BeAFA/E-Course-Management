@@ -19,7 +19,7 @@
                 <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
             </button>
         </div>
-        <a href="#" class="btn btn-primary">
+        <a href="/chapters/{{ chapter_id }}/lessons/add" class="btn btn-primary">
             <i class="fa-solid fa-user-plus"></i> Tạo bài học mới
         </a>
     </section>
@@ -28,21 +28,12 @@
 {% for lesson in lessons %}
 <main class="main-container">
     <section class="course-banner">
-        <h1 class="course-title">{{ lesson.title }}</h1>
+        <a href="/lessons/{{lesson.id}}" class="lesson-link" data-type="doc"
+           data-title="{{ lesson.title }}">
+            <h1 class="course-title">{{ loop.index }}.{{ lesson.title }}</h1>
+        </a>
+            <span class="status-badge video">Bài học</span>
     </section>
-    <div class="course-modules" id="courseModules">
-        <div class="module-card">
-            <div class="module-body">
-                <div class="lesson-item">
-                    <a href="/lessons/{{lesson.id}}" class="lesson-link" data-type="doc"
-                       data-title="{{ lesson.title }}">
-                        {{ loop.index }}.{{ lesson.title }}
-                    </a>
-                    <span class="status-badge video">Bài học</span>
-                </div>
-            </div>
-        </div>
-    </div>
 </main>
 {% endfor %}
 {% else %}
