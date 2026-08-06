@@ -1,12 +1,13 @@
 {%extends 'layout/base.html'%}
 {% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lesson_detail.css') }}">
 {% endblock %}
 {%block content%}
 <main class="create-form-container">
     <div class="form-card">
         <div class="form-header">
-            <h1>Tạo bài giảng mới</h1>
+            <h1>{% if lesson_id %}Chỉnh sửa bài giảng{% else %}Tạo bài giảng mới{% endif %}</h1>
         </div>
 
         {% if err_msg %}
@@ -15,31 +16,54 @@
         </div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('register_new_user') }}" class="form" enctype="multipart/form-data">
+        <form method="POST"
+              action="{% if lesson_id %}{{ url_for('update_lesson', lesson_id=lesson_id) }}{% else %}{{ url_for('add_lesson', chapter_id=chapter_id) }}{% endif %}"
+              class="form" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="title">Tên bài giảng <span class="required">*</span></label>
-                <input type="text" id="title" name="title" placeholder="Ví dụ: Lập trình Python" required>
+                <input type="text" id="title" name="title" placeholder="Ví dụ: Lập trình Python"
+                       value="{{ lesson.title if lesson_id and lesson else '' }}" required>
             </div>
 
             <div class="form-group">
-                <label for="video">Video bài giảng (nếu có)</label>
-                <input type="file" id="video" name="video">
+                {% if lesson.video_drive_id %}
+                <label for="video">Video hiện tại</label>
+                <div class="video-wrapper" id="current-video-preview">
+                    <video controls src="/media/video/{{ lesson.video_drive_id }}"></video>
+                </div>
+                {% endif %}
+                <div class="video-wrapper" id="new-video-wrapper" style="display: none;">
+                    <p class="preview-label">Video sau khi thay đổi</p>
+                    <video id="new-video-thumb" controls src="{{video}}"></video>
+                </div>
+                <input type="file" id="video" name="video" accept="video/*" {% if not lesson %}required{% endif %}>
             </div>
 
             <div class="form-group">
                 <label for="img">Ảnh bài giảng</label>
-                <input type="file" id="img" name="img">
+                {% if lesson_id and lesson and lesson.img_drive_id %}
+                <div class="img-preview">
+                    <img src="https://drive.google.com/thumbnail?id={{ lesson.img_drive_id }}&sz=w400"
+                         alt="Ảnh hiện tại" class="preview-thumb">
+                </div>
+                {% endif %}
+                <div class="img-preview" id="new-img-preview" style="display: none;">
+                    <p class="preview-label">Ảnh sau khi thay đổi</p>
+                    <img id="new-img-thumb" class="preview-thumb" src="" alt="Ảnh mới">
+                </div>
+                <input type="file" id="img" name="img" {% if not lesson %}required{% endif %}>
             </div>
 
             <div class="form-group">
                 <label for="article">Bài viết (nếu có)</label>
-                <textarea class="ckeditor" id="article" name="article"></textarea>
+                <textarea class="ckeditor" id="article" name="article">{{ lesson.article if lesson_id and lesson else '' }}</textarea>
             </div>
 
             <div class="form-actions">
-                <a href="{{url_for('lessons', chapter_id=chapter_id)}}" class="btn-cancel">Hủy bỏ</a>
+                <a href="{{ url_for('lessons', chapter_id=chapter_id if chapter_id else lesson.chapter_id) }}"
+                   class="btn-cancel">Hủy bỏ</a>
                 <button type="submit" class="btn-submit">
-                    Tạo bài học
+                    {% if lesson_id %}Lưu thay đổi{% else %}Tạo bài học{% endif %}
                 </button>
             </div>
         </form>
@@ -47,6 +71,8 @@
 </main>
 {%endblock%}
 {% block js %}
+<script src="{{ url_for('static', filename='js/img_pre_update.js') }}"></script>
+<script src="{{ url_for('static', filename='js/video_pre_update.js') }}"></script>
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script src="/static/js/ckeditor.js"></script>
 {% endblock %}
