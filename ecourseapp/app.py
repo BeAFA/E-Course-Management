@@ -210,6 +210,7 @@ def get_all_courses():
     courses = dao.get_courses()
     return render_template("chapter.html", courses=courses)
 
+
 @app.route('/courses/my_courses')
 def get_my_course():
     if not current_user.is_authenticated and current_user.role != UserRole.TEACHER:
@@ -220,6 +221,7 @@ def get_my_course():
         c.tag_names = dao.get_course_tag(c.id)
     return render_template("my_courses.html", courses=courses)
 
+
 @app.route('/courses/<int:course_id>')
 def course_detail(course_id):
     course = dao.get_course_by_id(course_id)
@@ -228,15 +230,18 @@ def course_detail(course_id):
 
     stats = dao.get_course_rating_stats(course_id)
     ratings_page = dao.get_ratings_by_course(course_id, page=request.args.get('page', 1, type=int))
+    is_owner = dao.is_course_owner(current_user, course)
 
     return render_template(
         'course_detail.html',
         course=course,
+        is_owner=is_owner,
         avg_rating=stats['avg_rating'],
         rating_count=stats['rating_count'],
         ratings=ratings_page.items,
-        pagination=ratings_page
+        pagination=ratings_page,
     )
+
 
 @app.route('/courses/<int:course_id>/rate', methods=['POST'])
 def rate_course(course_id):
@@ -252,6 +257,7 @@ def rate_course(course_id):
         pass
 
     return redirect(f'/courses/{course_id}')
+
 
 @app.route('/courses/create', methods=['GET', 'POST'])
 def create_course():
@@ -315,13 +321,9 @@ def create_course():
     return render_template('create_course.html', categories=categories, err_msg=err_msg)
 
 
-@app.route('/courses/<int:course_id>/chapters')
-def chapters(course_id):
-    course = dao.get_course_by_id(course_id)
-    if not current_user.is_authenticated or not dao.is_course_owner(current_user, course):
-        return redirect("/")
-    chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
-    return render_template("chapter.html", chapters=chapter_list, course_id=course_id)
+@app.route('/course/<int:course_id>/update', methods=['GET', 'POST'])
+def update_course(course_id):
+    pass
 
 
 @app.route('/courses/<int:course_id>/chapters/add', methods=["GET", "POST"])
@@ -467,6 +469,11 @@ def lesson_detail(lesson_id):
     if not current_user.is_authenticated or not dao.is_lesson_owner(current_user, lesson):
         return redirect("/")
     return render_template("lesson_detail.html", lesson=lesson)
+
+
+@app.route("/lessons/<int:lesson_id>/update", methods=["GET", "POST"])
+def update_lesson(lesson_id):
+    pass
 
 
 @app.route("/media/video/<file_id>")

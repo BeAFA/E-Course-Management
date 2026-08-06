@@ -1,6 +1,8 @@
 {% extends 'layout/base.html' %}
-{% block content %}
+{% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/create_course.css') }}">
+{% endblock %}
+{% block content %}
 <main class="create-course-container">
     <div class="form-card">
         <div class="form-header">
@@ -43,12 +45,12 @@
             </div>
 
             <div class="form-group">
-                <h4>Ảnh khóa học</h4>
-                <input type="file" name="img">
+                <label for="img">Ảnh khóa học</label>
+                <input type="file" id="img" name="img">
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('home') }}" class="btn-cancel">Hủy bỏ</a>
+                <a href="{{ url_for('get_my_course') }}" class="btn-cancel">Hủy bỏ</a>
                 <button type="submit" class="btn-submit">
                     Đăng khóa học
                 </button>

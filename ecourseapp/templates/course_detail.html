@@ -1,6 +1,9 @@
 {% extends 'layout/base.html' %}
-{% block content %}
+{% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+{% endblock %}
+{% block content %}
 <section class="course-banner">
     <h1 class="course-title">{{ course.name | default('Tên khóa học') }}</h1>
     <div class="progress-box">
@@ -35,15 +38,17 @@
                     <i class="fa-solid fa-book-open"></i> Chương
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
-                <a href="/courses/{{ course.id }}/chapters/add" class="btn btn-primary">
+                {% if is_owner %}
+                <a href="{{url_for('add_chapters', course_id=course.id)}}" class="btn-custom">
                     <i class="fa-solid fa-user-plus"></i> Tạo chương mới
                 </a>
+                {% endif %}
             </div>
             <div class="module-body">
                 {% if course.chapters %}
                 {% for chapter in course.chapters %}
                 <div class="lesson-item">
-                    <a href="/chapters/{{ chapter.id }}/lessons"  class="lesson-link" data-type="doc" data-title="{{ chapter.name }}">
+                    <a href="{{url_for('lessons', chapter_id=chapter.id)}}"  class="lesson-link" data-type="doc" data-title="{{ chapter.name }}">
                         {{ loop.index }}.{{ chapter.name }}
                     </a>
                     {% if chapter.description %}
@@ -69,6 +74,11 @@
                     <i class="fa-solid fa-pen-to-square"></i> Bài tập / Bài kiểm tra
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+                {% if is_owner %}
+                <a href="#" class="btn-custom">
+                    <i class="fa-solid fa-user-plus"></i> Tạo bài thi
+                </a>
+                {% endif %}
             </div>
             <div class="module-body">
                 {% if course.chapters %}
@@ -104,5 +114,7 @@
         Hỏi đáp<br>tự động<br>với AI
     </button>
 </div>
+{% endblock %}
+{% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

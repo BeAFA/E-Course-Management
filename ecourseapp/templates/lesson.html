@@ -1,6 +1,9 @@
 {% extends 'layout/base.html' %}
-{% block content %}
+{% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+{% endblock %}
+{% block content %}
 <section class="course-banner">
     <h1 class="course-title">Danh sách bài học</h1>
     <div class="progress-box">
@@ -19,7 +22,7 @@
                 <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
             </button>
         </div>
-        <a href="/chapters/{{ chapter_id }}/lessons/add" class="btn btn-primary">
+        <a href="{{ url_for('add_lesson', chapter_id=chapter_id) }}" class="btn-custom">
             <i class="fa-solid fa-user-plus"></i> Tạo bài học mới
         </a>
     </section>
@@ -28,7 +31,7 @@
 {% for lesson in lessons %}
 <main class="main-container">
     <section class="course-banner">
-        <a href="/lessons/{{lesson.id}}" class="lesson-link" data-type="doc"
+        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id)}}" class="lesson-link" data-type="doc"
            data-title="{{ lesson.title }}">
             <h1 class="course-title">{{ loop.index }}.{{ lesson.title }}</h1>
         </a>
@@ -41,5 +44,7 @@
     Hiện chưa có bài giảng được đăng lên
 </div>
 {% endif %}
+{% endblock %}
+{% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

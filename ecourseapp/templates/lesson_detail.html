@@ -1,14 +1,12 @@
 {%extends 'layout/base.html'%}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+{% endblock %}
 {%block content%}
-<link rel="stylesheet" href="/static/css/form.css">
-<script src="/static/js/video_support.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        initVideoControls('lessonVideo');
-    });
-</script>
+
+
 <body>
-<a href="/chapters/{{ chapter_id }}/lessons/add" class="btn btn-primary">
+<a href="{{ url_for('update_lesson', lesson_id=lesson.id) }}" class="btn btn-primary">
     <i class="fa-solid fa-user-plus"></i> Sửa bài giảng
 </a>
 {% if lesson %}
@@ -42,3 +40,11 @@
 {% endif %}
 </body>
 {%endblock%}
+{% block js %}
+<script src="{{ url_for('static', filename='js/video_support.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initVideoControls('lessonVideo');
+    });
+</script>
+{% endblock %}
