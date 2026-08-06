@@ -1,12 +1,16 @@
 {% extends 'layout/base.html' %}
-{% block content %}
+{% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+{% endblock %}
+{% block content %}
 <section class="course-banner">
     <h1 class="course-title">{{ course.name | default('Tên khóa học') }}</h1>
     <div class="progress-box">
         <span>Tiến độ hoàn thành:</span>
         <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;"></div>
+            <div class="progress-bar-fill" id="courseProgressFill"
+                 style="width: {{ progress | default('35') }}%;"></div>
         </div>
         <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
     </div>
@@ -31,30 +35,35 @@
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
-                    <i class="fa-solid fa-book-open"></i> Bài giảng
+                    <i class="fa-solid fa-book-open"></i> Chương
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+                {% if is_owner %}
+                <a href="{{url_for('add_chapters', course_id=course.id)}}" class="btn-custom">
+                    <i class="fa-solid fa-user-plus"></i> Tạo chương mới
+                </a>
+                {% endif %}
             </div>
             <div class="module-body">
-                {% if course.lessons and course.lessons|length > 0 %}
-                    {% for lesson in course.lessons %}
-                    <div class="lesson-item">
-                        <a class="lesson-link" data-type="doc" data-title="{{ lesson.name }}">
-                            {{ lesson.name }}
-                        </a>
-                        {% if lesson.description %}
-                            <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                                {{ lesson.description }}
+                {% if course.chapters %}
+                {% for chapter in course.chapters %}
+                <div class="lesson-item">
+                    <a href="{{url_for('lessons', chapter_id=chapter.id)}}"  class="lesson-link" data-type="doc" data-title="{{ chapter.name }}">
+                        {{ loop.index }}.{{ chapter.name }}
+                    </a>
+                    {% if chapter.description %}
+                    <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
+                                {{ chapter.description }}
                             </span>
-                        {% else %}
-                            <span class="status-badge video">Bài học</span>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+                    {% else %}
+                    <span class="status-badge video">Bài học</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
                 {% else %}
-                    <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-                        Hiện chưa có bài giảng được đăng lên
-                    </div>
+                <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
+                    Hiện chưa có bài giảng được đăng lên
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -65,36 +74,35 @@
                     <i class="fa-solid fa-pen-to-square"></i> Bài tập / Bài kiểm tra
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+                {% if is_owner %}
+                <a href="#" class="btn-custom">
+                    <i class="fa-solid fa-user-plus"></i> Tạo bài thi
+                </a>
+                {% endif %}
             </div>
             <div class="module-body">
-                {% set total_tests = namespace(count=0) %}
-                {% if course.lessons %}
-                    {% for lesson in course.lessons %}
-                        {% set total_tests.count = total_tests.count + (lesson.tests|length) %}
-                    {% endfor %}
-                {% endif %}
+                {% if course.chapters %}
+                {% for chapter in course.chapters %}
+                {% if chapter.test %}
+                <div class="lesson-item">
+                    <a class="lesson-link" data-type="doc" data-title="{{ chapter.test }}">
+                        {{ loop.index }}.{{chapter.name}}: {{ chapter.test }}
+                    </a>
 
-                {% if total_tests.count > 0 %}
-                    {% for lesson in course.lessons %}
-                        {% for test in lesson.tests %}
-                        <div class="lesson-item">
-                            <a class="lesson-link" data-type="quiz" data-title="{{ test.name }}">
-                                {{ test.name }}
-                                <small style="color: #64748b; font-size: 0.85em;">(Thuộc: {{ lesson.name }})</small>
-                            </a>
-                            
-                            {% if test.total_score %}
-                                <span class="status-badge score">Điểm tối đa: {{ test.total_score }}</span>
-                            {% else %}
-                                <span class="status-badge pending">Chưa hoàn thành</span>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    {% endfor %}
+                    {% if chapter.test.description %}
+                    <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
+                                {{ chapter.test.description }}
+                            </span>
+                    {% else %}
+                    <span class="status-badge video">Bài học</span>
+                    {% endif %}
+                </div>
                 {% else %}
-                    <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-                        Hiện chưa có bài tập hay bài kiểm tra được đăng lên
-                    </div>
+                <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
+                    Hiện chưa có bài thi được đăng lên
+                </div>
+                {% endif %}
+                {% endfor %}
                 {% endif %}
             </div>
         </div>
@@ -106,5 +114,7 @@
         Hỏi đáp<br>tự động<br>với AI
     </button>
 </div>
+{% endblock %}
+{% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

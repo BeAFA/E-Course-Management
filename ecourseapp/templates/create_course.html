@@ -1,6 +1,8 @@
 {% extends 'layout/base.html' %}
-{% block content %}
+{% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/create_course.css') }}">
+{% endblock %}
+{% block content %}
 <main class="create-course-container">
     <div class="form-card">
         <div class="form-header">
@@ -14,7 +16,7 @@
         </div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('create_course') }}" class="course-form">
+        <form method="POST" action="{{ url_for('create_course') }}" class="course-form" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="name">Tên khóa học <span class="required">*</span></label>
                 <input type="text" id="name" name="name" placeholder="Ví dụ: Lập trình Python" required>
@@ -32,16 +34,23 @@
 
             <div class="form-group">
                 <label for="price">Giá tiền (VNĐ)</label>
-                <input type="number" id="price" name="price" min="0" step="1000" placeholder="Ví dụ: 500000 (Để 0 nếu miễn phí)">
+                <input type="number" id="price" name="price" min="0" step="1000"
+                       placeholder="Ví dụ: 500000 (Để 0 nếu miễn phí)">
             </div>
 
             <div class="form-group">
                 <label for="description">Mô tả khóa học</label>
-                <textarea id="description" name="description" rows="6" placeholder="Giới thiệu nội dung, mục tiêu và yêu cầu đầu vào của khóa học..."></textarea>
+                <textarea id="description" name="description" rows="6"
+                          placeholder="Giới thiệu nội dung, mục tiêu và yêu cầu đầu vào của khóa học..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="img">Ảnh khóa học</label>
+                <input type="file" id="img" name="img">
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('home') }}" class="btn-cancel">Hủy bỏ</a>
+                <a href="{{ url_for('get_my_course') }}" class="btn-cancel">Hủy bỏ</a>
                 <button type="submit" class="btn-submit">
                     Đăng khóa học
                 </button>

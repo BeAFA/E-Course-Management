@@ -1,39 +1,177 @@
-body {
-    font-family:
-    Arial;
-}
-.box {
-    width: 70%; margin: 80px auto; padding: 30px;
-    background: white; border-radius: 10px; box-shadow: 0 0 15px #aaa;
-}
-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
 .ck{
     margin-bottom:5px;
 }
 input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; }
 button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-button:hover { background: #0056b3; }
-.link { font-size: 14px; margin-top: 10px; text-align: center; }
-.link a { color: #007bff; text-decoration: none; }
-.link a:hover { text-decoration: underline; }
 
-.flash-messages {
-    list-style: none;
-    padding-left: 0;
+
+* {
+    box-sizing: border-box;
 }
 
-.flash.success {
-    background-color: #e6f4ea;
-    color: #2e7d32;
-    border-left: 5px solid #2e7d32;
+.create-form-container {
+    max-width: 720px;
+    width: 100%;
+    margin: 40px auto 80px;
+    padding: 0 20px;
 }
 
-.flash.danger {
-    background-color: #fdecea;
-    color: #c62828;
-    border-left: 5px solid #c62828;
+.form-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 36px 40px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    text-align: left;
+}
+
+.form-header {
+    margin-bottom: 28px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 18px;
+    text-align: left;
+}
+
+.form-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+}
+
+.form-header p {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.alert-error {
+    background-color: #fef2f2;
+    border: 1px solid #f87171;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.form .form-group {
+    width: 100%;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.form label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 8px;
+    display: block;
+    text-align: left;
+}
+
+.required {
+    color: #dc2626;
+}
+
+.form input[type="text"],
+.form input[type="number"],
+.form select,
+.form textarea {
+    width: 100% !important;
+    max-width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1e293b;
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    font-family: inherit;
+    text-align: left;
+}
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.form textarea {
+    resize: vertical;
+    min-height: 140px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+.btn-cancel {
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    padding: 10px 20px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.btn-cancel:hover {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+.btn-submit {
+    background-color: #1f2a44;
+    color: #ffffff;
+    border: none;
+    padding: 11px 28px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-submit:hover {
+    background-color: #141b2e;
+}
+
+@media (max-width: 640px) {
+    .form-card {
+        padding: 24px 20px;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+        gap: 12px;
+    }
+
+    .btn-cancel,
+    .btn-submit {
+        width: 100%;
+        text-align: center;
+    }
 }

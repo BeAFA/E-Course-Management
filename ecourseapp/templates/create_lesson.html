@@ -1,31 +1,52 @@
 {%extends 'layout/base.html'%}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+{% endblock %}
 {%block content%}
-<link rel="stylesheet" href="/static/css/form.css">
+<main class="create-form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>Tạo bài giảng mới</h1>
+        </div>
+
+        {% if err_msg %}
+        <div class="alert-error">
+            {{ err_msg }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('register_new_user') }}" class="form" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Tên bài giảng <span class="required">*</span></label>
+                <input type="text" id="title" name="title" placeholder="Ví dụ: Lập trình Python" required>
+            </div>
+
+            <div class="form-group">
+                <label for="video">Video bài giảng (nếu có)</label>
+                <input type="file" id="video" name="video">
+            </div>
+
+            <div class="form-group">
+                <label for="img">Ảnh bài giảng</label>
+                <input type="file" id="img" name="img">
+            </div>
+
+            <div class="form-group">
+                <label for="article">Bài viết (nếu có)</label>
+                <textarea class="ckeditor" id="article" name="article"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{url_for('lessons', chapter_id=chapter_id)}}" class="btn-cancel">Hủy bỏ</a>
+                <button type="submit" class="btn-submit">
+                    Tạo bài học
+                </button>
+            </div>
+        </form>
+    </div>
+</main>
+{%endblock%}
+{% block js %}
 <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
 <script src="/static/js/ckeditor.js"></script>
-<body>
-{% if err_msg %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong>Lỗi:</strong> {{ err_msg }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}
-<div class="box">
-    <h2>Tạo bài học</h2>
-    <form action="/chapters/{{ chapter_id }}/lessons/add" method="POST" enctype="multipart/form-data">
-        <h4>Tên bài giảng</h4>
-        <input type="text" name="title" required>
-        <h4>Video bài giảng (nếu có)</h4>
-        <input type="file" name="video">
-        <h4>File bài giảng (nếu có)</h4>
-        <input type="file" name="pdf">
-        <h4>Bài viết (nếu có)</h4>
-        <textarea class="ckeditor" name="article"></textarea>
-        <button type="submit">Tạo bài giảng</button>
-    </form>
-    <div class="link">
-        <a href="/lessons">Hủy</a>
-    </div>
-</div>
-</body>
-{%endblock%}
+{% endblock %}

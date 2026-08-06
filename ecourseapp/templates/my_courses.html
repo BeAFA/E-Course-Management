@@ -1,0 +1,65 @@
+{%extends 'layout/base.html'%}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/course_manage.css') }}">
+{% endblock %}
+{%block content%}
+<body>
+<div class="courses-page container">
+    <div class="courses-header">
+        <h2>Quản lý khóa học</h2>
+        <a href="{{ url_for('create_course') }}" class="btn-create-course">
+            <i class="fa-solid fa-user-plus"></i> Tạo khóa học mới
+        </a>
+    </div>
+
+    <div class="courses-card">
+        <table class="courses-table">
+            <thead>
+            <tr>
+                <th></th>
+                <th>Tên khóa học</th>
+                <th>Loại</th>
+                <th>Tag</th>
+                <th>Mô tả</th>
+                <th>Giá (đ)</th>
+                <th>Đang hoạt động</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for course in courses %}
+            <tr>
+                <td><input type="checkbox" class="row-check" value="{{ course.id }}"></td>
+                <td>
+                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="course-card-link">
+                        {{ course.name }}
+                    </a>
+                </td>
+                <td>{{ course.category }}</td>
+                <td>
+                    {% for tag_name in course.tag_names %}
+                    <span class="badge-tag">{{ tag_name }}</span>
+                    {% endfor %}
+                </td>
+                <td class="desc-cell" title="{{ course.description }}">{{ course.description }}</td>
+                <td class="price-cell">{{ "{:,.0f}".format(course.price) }}</td>
+                <td>
+                    {% if course.is_active %}
+                    <span class="status-badge status-active">Đang hoạt động</span>
+                    {% else %}
+                    <span class="status-badge status-inactive">Ngừng hoạt động</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <a href="{{ url_for('update_course', course_id=course.id) }}" class="edit-btn" title="Chỉnh sửa">
+                        &#128393;
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+{%endblock%}
