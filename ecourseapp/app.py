@@ -2,7 +2,7 @@ import os
 import requests
 from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import render_template, request, redirect, Response, stream_with_context
+from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from werkzeug.utils import secure_filename
 
@@ -323,7 +323,85 @@ def create_course():
 
 @app.route('/course/<int:course_id>/update', methods=['GET', 'POST'])
 def update_course(course_id):
-    pass
+    if not current_user.is_authenticated:
+        return redirect('/login')
+
+    err_msg = ""
+    course = dao.get_course_by_id(course_id)
+    if not dao.is_course_owner(current_user, course):
+        err_msg = "Bạn không có quyền chỉnh sửa khóa học này"
+        return render_template("home.html", err_msg=err_msg)
+
+    if course is None:
+        err_msg="Khóa học không tồn tại"
+        return render_template("my_course.html", err_msg=err_msg)
+
+    categories = dao.get_categories()
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        price = request.form.get('price')
+        category_id = request.form.get('category_id')
+        description = request.form.get('description')
+        # tag_ids = request.form.getlist("tag_ids")
+
+        img_drive_id = course.img_drive_id
+        img_url = course.img_url
+
+        img = request.files.get("img")
+        if img and img.filename != '':
+            os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+            filename = secure_filename(img.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            img.save(filepath)
+
+            # Tải ảnh mới của người dùng lên Drive
+            uploaded_id, uploaded_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+            if uploaded_id is None:
+                err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại."
+                return render_template("create_course.html", course=course, categories=categories, err_msg=err_msg)
+
+            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
+            img_drive_id = uploaded_id
+            img_url = uploaded_url
+
+        if not name or not category_id:
+            err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
+            return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
+        try:
+            dao.update_course(course,name,price,category_id,description,img_drive_id,img_url, tag_ids=None)
+            db.session.commit()
+            return redirect(f'/courses/{course.id}')
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            err_msg = "Có lỗi xảy ra khi đăng khóa học. Vui lòng thử lại sau!"
+            return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
+
+    return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
+
+@app.route('/courses/bulk-update-status', methods=['POST'])
+def bulk_update_course_status():
+    if not current_user.is_authenticated:
+        return jsonify({"success": False, "message": "Chưa đăng nhập"}), 401
+
+    data = request.get_json()
+    course_ids = data.get('course_ids', [])
+    is_active = data.get('is_active')
+
+    if not course_ids or is_active is None:
+        return jsonify({"success": False, "message": "Dữ liệu không hợp lệ"}), 400
+
+    try:
+        dao.bulk_update_active(course_ids, is_active, current_user.id)
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as ex:
+        db.session.rollback()
+        print(ex)
+        return jsonify({"success": False, "message": "Có lỗi xảy ra, vui lòng thử lại"}), 500
 
 
 @app.route('/courses/<int:course_id>/chapters/add', methods=["GET", "POST"])
@@ -335,6 +413,10 @@ def add_chapters(course_id):
     if request.method == "POST":
         name = request.form.get("name")
         description = request.form.get("description")
+
+        if not name:
+            return render_template("create_chapter.html", course_id=course_id,
+                                   err_msg="Bạn phải đặt tên cho chương")
 
         chapter = Chapter(
             name=name,
@@ -354,6 +436,46 @@ def add_chapters(course_id):
 
     chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
     return render_template("create_chapter.html", chapters=chapter_list, course_id=course_id)
+
+@app.route('/courses/<int:course_id>/chapters/<int:chapter_id>/update', methods=["GET", "POST"])
+def update_chapters(course_id, chapter_id):
+    if not current_user.is_authenticated:
+        return redirect('/login')
+
+    course = dao.get_course_by_id(course_id)
+    is_owner = dao.is_course_owner(current_user, course)
+    if not dao.is_course_owner(current_user, course):
+        return render_template("course_detail.html", course=course, is_owner=is_owner,
+                                err_msg="Bạn không có quyền chỉnh sửa khóa học này")
+
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if chapter is None or chapter.course_id != course_id:
+        return render_template("course_detail.html", course=course,
+                                is_owner=is_owner, err_msg="Chương này không tồn tại")
+
+    if request.method == "POST":
+        name = request.form.get("name")
+        description = request.form.get("description")
+
+        if not name:
+            chapter.name = name
+            chapter.description = description
+            return render_template("create_chapter.html", chapter=chapter,
+                                   course_id=course_id,
+                                   err_msg="Bạn phải đặt tên cho chương")
+        try:
+            dao.update_chapter(chapter, name, description)
+            db.session.commit()
+            return redirect(url_for('course_detail', course_id=course_id))
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return "Upload failed"
+
+    chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
+    return render_template("create_chapter.html", chapter=chapter,
+                            chapters=chapter_list, course_id=course_id)
+
 
 
 @app.route('/chapters/<int:chapter_id>/lessons')

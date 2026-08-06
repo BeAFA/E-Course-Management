@@ -49,6 +49,7 @@ def get_my_courses(teacher_id):
 def get_course_by_id(course_id):
     return models.Course.query.get(course_id)
 
+
 def get_course_tag(course_id):
     course_tags = (
         db.session.query(models.CourseTag)
@@ -56,6 +57,7 @@ def get_course_tag(course_id):
         .all()
     )
     return [ct.tag.name for ct in course_tags]
+
 
 def get_categories():
     return models.Category.query.all()
@@ -83,6 +85,23 @@ def create_course(name, price, category_id, description, teacher_id, img_drive_i
     db.session.commit()
     return course
 
+
+def update_course(course, name, price, category_id, description, img_drive_id, img_url, tag_ids=None):
+    course.name = name
+    course.price = int(price) if price and price.isdigit() else 0
+    course.category_id = int(category_id)
+    course.description = description
+    course.img_drive_id = img_drive_id
+    course.img_url = img_url
+
+    # if tag_ids:
+    #     for tag_id in tag_ids:
+    #         course_tag = models.CourseTag(course_id=course.id, tag_id=int(tag_id))
+    #         db.session.add(course_tag)
+
+    return course
+
+
 def get_course_rating_stats(course_id):
     result = db.session.query(
         func.coalesce(func.avg(models.Rating.rating), 0).label('avg_rating'),
@@ -107,6 +126,7 @@ def get_user_rating_for_course(user_id, course_id):
     """Kiểm tra user đã rate khóa học này chưa (để hiện form sửa thay vì tạo mới)"""
     return models.Rating.query.filter_by(user_id=user_id, course_id=course_id).first()
 
+
 def add_or_update_rating(user_id, course_id, rating_value, comment=None):
     # Bắt buộc phải là học viên đã enroll mới được rate
     enrolled = models.Enrollment.query.filter_by(user_id=user_id, course_id=course_id).first()
@@ -129,6 +149,15 @@ def add_or_update_rating(user_id, course_id, rating_value, comment=None):
     db.session.commit()
     return rating, None
 
+def bulk_update_active(course_ids, is_active, teacher_id):
+    # Ép kiểu vì course_ids từ JSON gửi lên là list các string
+    ids = [int(cid) for cid in course_ids]
+
+    models.Course.query.filter(
+        models.Course.id.in_(ids),
+        models.Course.teacher_id == teacher_id   # đảm bảo chỉ update khóa học của chính giảng viên này
+    ).update({models.Course.is_active: is_active}, synchronize_session=False)
+
 def get_chapter_by_id(chapter_id):
     return models.Chapter.query.get(chapter_id)
 
@@ -148,6 +177,11 @@ def is_chapter_owner(user, chapter):
         return False
     return is_course_owner(user, chapter.course)
 
+def update_chapter(chapter, name, description):
+    chapter.name = name
+    chapter.description = description
+
+    return chapter
 
 def is_lesson_owner(user, lesson):
     if not user or not lesson:

@@ -16,26 +16,69 @@
         margin: 0;
     }
 
-    .btn-create-course {
-        background: linear-gradient(135deg, #4e54c8, #8f94fb);
-        border: none;
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 10px;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        text-decoration: none;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        box-shadow: 0 4px 14px rgba(78, 84, 200, 0.35);
-    }
+   .bulk-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #262838;
+    border: 1px solid #33354a;
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    animation: fadeInDown 0.2s ease;
+}
 
-    .btn-create-course:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(78, 84, 200, 0.5);
-        color: #fff;
-    }
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#selected-count {
+    color: #c9caed;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.bulk-actions .btn-activate,
+.bulk-actions .btn-deactivate {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    margin-left: 8px;
+}
+
+.bulk-actions .btn-activate {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.bulk-actions .btn-activate:hover {
+    background: #2ecc71;
+    color: #1e1f2b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.35);
+}
+
+.bulk-actions .btn-deactivate {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.bulk-actions .btn-deactivate:hover {
+    background: #e74c3c;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.35);
+}
 
     .courses-card {
         background: #1e1f2b;

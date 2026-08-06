@@ -108,6 +108,37 @@ button { width: 100%; padding: 10px; background: #007bff; color: white; border: 
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+.img-preview {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px dashed #d0d5dd;
+    border-radius: 10px;
+    background-color: #f9fafb;
+    box-sizing: border-box;
+}
+
+.img-preview .preview-thumb {
+    width: 100%;
+    max-width: 480px;
+    max-height: 260px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e4e7ec;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.img-preview .hint-text {
+    margin: 0;
+    font-size: 13px;
+    color: #667085;
+    text-align: center;
+}
+
 .form textarea {
     resize: vertical;
     min-height: 140px;
