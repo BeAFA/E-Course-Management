@@ -595,7 +595,79 @@ def lesson_detail(lesson_id):
 
 @app.route("/lessons/<int:lesson_id>/update", methods=["GET", "POST"])
 def update_lesson(lesson_id):
-    pass
+    if not current_user.is_authenticated:
+        return redirect('/login')
+
+    lesson = dao.get_lesson_by_id(lesson_id)
+    is_owner = dao.is_lesson_owner(current_user, lesson)
+    if not is_owner:
+        return render_template("course_detail.html", course_id=lesson.chapter.course_id,
+                               is_owner=is_owner, err_msg="Bạn không có quyền chỉnh sửa khóa học này")
+
+    chapter = dao.get_chapter_by_id(lesson.chapter_id)
+    if lesson is None or lesson.chapter_id != chapter.id:
+        return render_template("course_detail.html", course=lesson.chapter.course_id,
+                               is_owner=is_owner, err_msg="Chương này không tồn tại")
+
+    if request.method == "POST":
+        title = request.form.get("title")
+        if not title or title.strip() == "":
+            return render_template("create_lesson.html", lesson_id=lesson.id, lesson=lesson,
+                                   err_msg="Bạn phải đặt tiêu đề cho bài giảng của mình")
+
+        os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+
+        video_drive_id = lesson.video_drive_id
+        video_url = lesson.video_url
+        video = request.files.get("video")
+        if video and video.filename:
+            filename = secure_filename(video.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            video.save(filepath)
+            video_drive_id, video_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+            if video_drive_id is None:
+                return render_template("create_lesson.html", lesson_id=lesson.id, lesson=lesson,
+                                       err_msg="Tải video lên Drive thất bại, vui lòng thử lại.")
+
+        img_drive_id = lesson.img_drive_id
+        img_url = lesson.img_url
+        img = request.files.get("img")
+        if img and img.filename != '':
+            filename = secure_filename(img.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            img.save(filepath)
+            uploaded_id, uploaded_url = upload_file(filepath, filename)
+            os.remove(filepath)
+
+            if uploaded_id is None:
+                return render_template("create_lesson.html", lesson_id=lesson.id, lesson=lesson,
+                                       err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
+
+            img_drive_id = uploaded_id
+            img_url = uploaded_url
+
+        article = request.form.get("article")
+
+        lesson.title = title
+        lesson.video_drive_id = video_drive_id
+        lesson.video_url = video_url
+        lesson.article = article
+        lesson.img_drive_id = img_drive_id
+        lesson.img_url = img_url
+
+        try:
+            db.session.commit()
+            return redirect(f"/chapters/{lesson.chapter_id}/lessons")
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template("create_lesson.html", lesson_id=lesson.id, lesson=lesson,
+                                   err_msg="Lưu bài học thất bại, vui lòng thử lại.")
+
+    return render_template("create_lesson.html", lesson_id=lesson.id, lesson=lesson,
+                           chapter_id=lesson.chapter_id)
 
 
 @app.route("/media/video/<file_id>")
