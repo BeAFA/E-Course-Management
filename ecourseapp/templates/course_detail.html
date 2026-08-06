@@ -15,7 +15,9 @@
         <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
     </div>
 </section>
-
+{% if err_msg %}
+<div class="alert alert-danger">{{ err_msg }}</div>
+{% endif %}
 <main class="main-container">
     <section class="course-intro-section">
         <div class="intro-left">
@@ -48,9 +50,19 @@
                 {% if course.chapters %}
                 {% for chapter in course.chapters %}
                 <div class="lesson-item">
-                    <a href="{{url_for('lessons', chapter_id=chapter.id)}}"  class="lesson-link" data-type="doc" data-title="{{ chapter.name }}">
-                        {{ loop.index }}.{{ chapter.name }}
-                    </a>
+                    <div style="display: flex;">
+                        <a href="{{url_for('lessons', chapter_id=chapter.id)}}" class="lesson-link"
+                           style="margin-right:5px;" data-type="doc"
+                           data-title="{{ chapter.name }}">
+                            {{ loop.index }}.{{ chapter.name }}
+                        </a>
+                        {% if is_owner %}
+                        <a href="{{url_for('update_chapters', course_id=course.id, chapter_id=chapter.id)}}"
+                           class="edit-btn" title="Chỉnh sửa">
+                            &#128393;
+                        </a>
+                        {% endif %}
+                    </div>
                     {% if chapter.description %}
                     <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
                                 {{ chapter.description }}
@@ -81,28 +93,27 @@
                 {% endif %}
             </div>
             <div class="module-body">
-                {% if course.chapters %}
-                {% for chapter in course.chapters %}
-                {% if chapter.test %}
+                {% set has_test = course.chapters | selectattr('test') | list %}
+                {% if has_test %}
+                {% for chapter in has_test %}
                 <div class="lesson-item">
                     <a class="lesson-link" data-type="doc" data-title="{{ chapter.test }}">
-                        {{ loop.index }}.{{chapter.name}}: {{ chapter.test }}
+                        {{ loop.index }}.{{ chapter.name }}: {{ chapter.test }}
                     </a>
 
                     {% if chapter.test.description %}
                     <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                                {{ chapter.test.description }}
-                            </span>
+                {{ chapter.test.description }}
+            </span>
                     {% else %}
                     <span class="status-badge video">Bài học</span>
                     {% endif %}
                 </div>
+                {% endfor %}
                 {% else %}
                 <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
                     Hiện chưa có bài thi được đăng lên
                 </div>
-                {% endif %}
-                {% endfor %}
                 {% endif %}
             </div>
         </div>

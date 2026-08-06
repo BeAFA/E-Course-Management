@@ -102,6 +102,42 @@
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+.img-preview {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px dashed #d0d5dd;
+    border-radius: 10px;
+    background-color: #f9fafb;
+    box-sizing: border-box;
+}
+
+.img-preview .preview-label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #344054;
+}
+
+.img-preview .preview-thumb {
+    width: 100%;
+    max-width: 480px;
+    max-height: 260px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e4e7ec;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+#new-img-preview {
+    border-color: #7f56d9;
+    background-color: #f9f5ff;
+}
+
 .course-form textarea {
     resize: vertical;
     min-height: 140px;

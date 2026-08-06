@@ -6,7 +6,7 @@
 <main class="create-form-container">
     <div class="form-card">
         <div class="form-header">
-            <h1>Tạo chương mới</h1>
+            <h1>{{ 'Sửa chương' if chapter else 'Tạo chương mới' }}</h1>
         </div>
 
         {% if err_msg %}
@@ -15,21 +15,25 @@
         </div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('add_chapters', course_id=course_id) }}" class="form">
+        <form method="POST"
+              action="{{ url_for('update_chapters', course_id=course_id, chapter_id=chapter.id) if chapter else url_for('add_chapters', course_id=course_id) }}"
+              class="form">
             <div class="form-group">
                 <label for="name">Tiêu đề<span class="required">*</span></label>
-                <input type="text" id="name" name="name" placeholder="Ví dụ: Chương 1: Giới thiệu...">
+                <input type="text" id="name" name="name" placeholder="Ví dụ: Chương 1: Giới thiệu..."
+                       value="{{ chapter.name if chapter else '' }}">
             </div>
 
             <div class="form-group">
                 <label for="description">Miêu tả</label>
                 <input type="text" id="description" name="description"
-                       placeholder="Miêu tả tổng quát chương">
+                       placeholder="Miêu tả tổng quát chương"
+                       value="{{ chapter.description if chapter else '' }}">
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn-submit">
-                    Tạo chương mới
+                    {{ 'Lưu thay đổi' if chapter else 'Tạo chương mới' }}
                 </button>
                 <a href="{{url_for('course_detail', course_id=course_id)}}" class="btn-cancel">Hủy</a>
             </div>
