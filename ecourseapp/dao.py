@@ -188,6 +188,36 @@ def is_lesson_owner(user, lesson):
         return False
     return is_chapter_owner(user, lesson.chapter)
 
+def get_or_create_chat_room(student_id, teacher_id, course_id):
+    room = models.ChatRoom.query.filter_by(
+        student_id=student_id,
+        teacher_id=teacher_id,
+        course_id=course_id
+    ).first()
+    
+    if not room:
+        room = models.ChatRoom(
+            student_id=student_id,
+            teacher_id=teacher_id,
+            course_id=course_id
+        )
+        db.session.add(room)
+        db.session.commit()
+        
+    return room
+
+def get_chat_room_by_id(room_id):
+    return models.ChatRoom.query.get(room_id)
+
+def get_teacher_chat_rooms(course_id, teacher_id):
+    return models.ChatRoom.query.filter_by(
+        course_id=course_id,
+        teacher_id=teacher_id
+    ).all()
+
+def get_chat_messages(room_id):
+    return models.ChatRoomMessage.query.filter_by(chat_room_id=room_id).order_by(models.ChatRoomMessage.id.asc()).all()
+
 
 def get_admin_dashboard_stats():
     commission_record = models.Commission.query.first()

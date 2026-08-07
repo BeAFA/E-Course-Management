@@ -9,8 +9,8 @@
     <div class="progress-box">
         <span>Tiến độ hoàn thành:</span>
         <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill"
-                 style="width: {{ progress | default('35') }}%;"></div>
+            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;">
+            </div>
         </div>
         <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
     </div>
@@ -27,9 +27,19 @@
             </p>
         </div>
         <div class="intro-right">
-            <button type="button" class="btn-ask-teacher" id="btnAskTeacher">
-                <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
-            </button>
+            {% if current_user.is_authenticated %}
+            {% if is_owner %}
+            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher"
+                style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-regular fa-comments"></i> Hỏi đáp với học viên
+            </a>
+            {% else %}
+            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher"
+                style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-regular fa-comment-dots"></i> Vào phòng chat với giảng viên
+            </a>
+            {% endif %}
+            {% endif %}
         </div>
     </section>
 
@@ -52,21 +62,20 @@
                 <div class="lesson-item">
                     <div style="display: flex;">
                         <a href="{{url_for('lessons', chapter_id=chapter.id)}}" class="lesson-link"
-                           style="margin-right:5px;" data-type="doc"
-                           data-title="{{ chapter.name }}">
+                            style="margin-right:5px;" data-type="doc" data-title="{{ chapter.name }}">
                             {{ loop.index }}.{{ chapter.name }}
                         </a>
                         {% if is_owner %}
                         <a href="{{url_for('update_chapters', course_id=course.id, chapter_id=chapter.id)}}"
-                           class="edit-btn" title="Chỉnh sửa">
+                            class="edit-btn" title="Chỉnh sửa">
                             &#128393;
                         </a>
                         {% endif %}
                     </div>
                     {% if chapter.description %}
                     <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                                {{ chapter.description }}
-                            </span>
+                        {{ chapter.description }}
+                    </span>
                     {% else %}
                     <span class="status-badge video">Bài học</span>
                     {% endif %}
@@ -103,8 +112,8 @@
 
                     {% if chapter.test.description %}
                     <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                {{ chapter.test.description }}
-            </span>
+                        {{ chapter.test.description }}
+                    </span>
                     {% else %}
                     <span class="status-badge video">Bài học</span>
                     {% endif %}
@@ -125,7 +134,9 @@
         Hỏi đáp<br>tự động<br>với AI
     </button>
 </div>
+
 {% endblock %}
+
 {% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

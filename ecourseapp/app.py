@@ -5,10 +5,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from werkzeug.utils import secure_filename
+from flask_socketio import SocketIO, emit, join_room
 
 from __init__ import app, db, login
 from services.drive_service import upload_file, credentials
-from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag
+from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag, ChatRoom, ChatRoomMessage
 import dao
 
 import admin
@@ -630,6 +631,84 @@ def stream_video(file_id):
 
     return resp
 
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+@socketio.on('join_chat')
+def handle_join(data):
+    room_id = str(data['room_id'])
+    join_room(room_id)
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    room_id = data['room_id']
+    content = data['content']
+    sender_id = current_user.id
+    
+    msg = ChatRoomMessage(
+        chat_room_id=room_id,
+        sender_id=sender_id,
+        content=content
+    )
+    db.session.add(msg)
+    db.session.commit()
+    
+    avatar_url = current_user.img_url if (current_user.img_url and str(current_user.img_url).strip() != "") else ""
+    avatar_text = current_user.name[0].upper() if (current_user.name and len(current_user.name) > 0) else "U"
+
+    emit('receive_message', {
+        'sender_id': sender_id,
+        'sender_name': current_user.name,
+        'avatar_url': avatar_url,
+        'avatar_text': avatar_text,
+        'content': content
+    }, room=str(room_id))
+
+
+@app.route('/courses/<int:course_id>/chat')
+def join_course_chat(course_id):
+    course = dao.get_course_by_id(course_id)
+    if not course:
+        abort(404)
+        
+    if current_user.id == course.teacher_id:
+        student_rooms = dao.get_teacher_chat_rooms(course.id, current_user.id)
+        
+        if student_rooms:
+            return redirect(url_for('open_chat_room', room_id=student_rooms[0].id))
+        else:
+            err_msg = "Hiện chưa có học viên nào tham gia phòng hỏi đáp của khóa học này!"
+            return render_template('course_detail.html', course=course, progress=35, err_msg=err_msg)
+            
+    room = dao.get_or_create_chat_room(
+        student_id=current_user.id,
+        teacher_id=course.teacher_id,
+        course_id=course.id
+    )
+    return redirect(url_for('open_chat_room', room_id=room.id))
+
+
+@app.route('/chat/<int:room_id>')
+def open_chat_room(room_id):
+    room = dao.get_chat_room_by_id(room_id)
+    if not room:
+        abort(404)
+    
+    if current_user.id not in [room.student_id, room.teacher_id]:
+        abort(403)
+        
+    messages = dao.get_chat_messages(room.id)
+    
+    student_rooms = []
+    if current_user.id == room.teacher_id:
+        student_rooms = dao.get_teacher_chat_rooms(room.course_id, current_user.id)
+    
+    return render_template(
+        'chat_room.html', 
+        room=room, 
+        course=room.course, 
+        messages=messages,
+        student_rooms=student_rooms
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
