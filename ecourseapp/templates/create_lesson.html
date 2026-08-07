@@ -17,7 +17,7 @@
         {% endif %}
 
         <form method="POST"
-              action="{% if lesson_id %}{{ url_for('update_lesson', lesson_id=lesson_id) }}{% else %}{{ url_for('add_lesson', chapter_id=chapter_id) }}{% endif %}"
+              action="{% if lesson_id %}{{ url_for('create_or_update_lesson', lesson_id=lesson_id) }}{% else %}{{ url_for('create_or_update_lesson', chapter_id=chapter_id) }}{% endif %}"
               class="form" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="title">Tên bài giảng <span class="required">*</span></label>

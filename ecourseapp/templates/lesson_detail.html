@@ -8,7 +8,7 @@
 
 <section class="course-banner">
     <h1 class="course-title">{{ lesson.title if lesson else 'Chi tiết bài học' }}</h1>
-    <a href="{{ url_for('update_lesson', lesson_id=lesson.id) }}" class="btn-custom">
+    <a href="{{ url_for('create_or_update_lesson', lesson_id=lesson.id) }}" class="btn-custom">
         <i class="fa-solid fa-pen"></i> Sửa bài giảng
     </a>
 </section>
