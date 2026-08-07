@@ -1,4 +1,6 @@
 import os
+import tempfile
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -88,3 +90,43 @@ def delete_file(file_id):
     drive_service.files().delete(
         fileId=file_id
     ).execute()
+
+def replace_drive_file(obj, drive_id_field, url_field, file_storage, filename=None):
+    """
+    Thay thế file (ảnh/video/...) cũ trên Drive bằng file mới cho 1 object bất kỳ.
+
+    obj: đối tượng model (vd: Lesson, User, Course...) đã có 2 field
+         <drive_id_field> và <url_field>
+    drive_id_field: tên field lưu file_id trên Drive (vd: "video_drive_id")
+    url_field: tên field lưu url preview (vd: "video_url")
+    file_storage: file upload từ request (werkzeug FileStorage, vd request.files['video'])
+    filename: tên file muốn lưu trên Drive (mặc định lấy tên gốc)
+    """
+    old_file_id = getattr(obj, drive_id_field, None)
+
+    # Lưu file tạm ra ổ đĩa vì MediaFileUpload cần path
+    filename = filename or file_storage.filename
+    suffix = os.path.splitext(filename)[1]
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        file_storage.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        new_file_id, new_url = upload_file(tmp_path, filename)
+        if new_file_id is None:
+            # upload thất bại -> không đụng gì tới file cũ, giữ nguyên object
+            return obj
+    finally:
+        os.remove(tmp_path)
+
+    # Upload mới thành công thì mới xóa file cũ (tránh mất dữ liệu nếu upload lỗi)
+    if old_file_id:
+        try:
+            delete_file(old_file_id)
+        except HttpError as e:
+            print("Không xóa được file cũ trên Drive:", e)
+
+    setattr(obj, drive_id_field, new_file_id)
+    setattr(obj, url_field, new_url)
+
+    return obj
