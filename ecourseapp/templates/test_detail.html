@@ -1,0 +1,64 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/create_test.css">
+
+<div class="create-test-wrapper">
+    <!-- Header -->
+    <div class="test-header flex-space-between">
+        <div>
+            <h2><i class="fa-solid fa-file-circle-check"></i> Chi Tiết Bài Thi: {{ test.name }}</h2>
+            <div class="test-header-sub">{{ test.description or 'Không có mô tả.' }}</div>
+        </div>
+        <a href="/chapters/{{ test.chapter_id }}/tests" class="btn-main-action btn-add-q" style="text-decoration: none;">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <!-- Thông tin tổng quan -->
+    <div class="test-card">
+        <div class="block-title">
+            <span><i class="fa-solid fa-circle-info text-primary"></i> Thông tin tổng quan</span>
+            <span class="q-badge">Thang điểm: {{ test.total_score or 10 }}</span>
+        </div>
+        <p class="text-muted mb-0" style="font-size: 14px;"><strong>Tổng số câu hỏi:</strong> {{ test.questions|length }} câu</p>
+    </div>
+
+    <!-- Danh sách câu hỏi -->
+    <div id="questions-container">
+        {% for q in test.questions %}
+        <div class="test-card">
+            <div class="block-title">
+                <span class="q-badge">Câu {{ loop.index }}: {{ q.content }}</span>
+            </div>
+
+            <label class="form-label-custom" style="margin-top: 10px;">Danh sách đáp án:</label>
+            <div class="choices-container">
+                {% for c in q.choices %}
+                <div class="choice-item-row" style="background-color: {% if c.is_true %}#f0fdf4{% else %}#f8fafc{% endif %}; border-color: {% if c.is_true %}#bbf7d0{% else %}#e2e8f0{% endif %};">
+                    <span class="radio-btn-wrapper" style="background: {% if c.is_true %}#dcfce7{% else %}#ffffff{% endif %}; color: {% if c.is_true %}#15803d{% else %}#334155{% endif %}; border-color: {% if c.is_true %}#86efac{% else %}#cbd5e1{% endif %};">
+                        {% if c.is_true %}
+                            <i class="fa-solid fa-circle-check" style="color: #16a34a;"></i>
+                            <span>ĐÁP ÁN ĐÚNG</span>
+                        {% else %}
+                            <i class="fa-regular fa-circle" style="color: #94a3b8;"></i>
+                            <span>Lựa chọn</span>
+                        {% endif %}
+                    </span>
+                    <span class="form-control-custom" style="border: none; background: transparent; font-weight: {% if c.is_true %}600{% else %}400{% endif %}; color: {% if c.is_true %}#14532d{% else %}#0f172a{% endif %};">
+                        {{ c.answer }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="test-card text-center py-4" style="text-align: center !important;">
+            <p class="text-muted mb-0">Bài thi này chưa có câu hỏi nào.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

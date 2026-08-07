@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login
 from services.drive_service import upload_file, credentials
-from models import User, UserRole, Level, Lesson, Chapter, Course
+from models import User, UserRole, Level, Lesson, Chapter, Course, Question, Test, Choice
 import dao
 
 import admin
@@ -368,6 +368,164 @@ def stream_video(file_id):
     resp.headers["Content-Disposition"] = "inline"  # ép phát trực tiếp, không tải file
 
     return resp
+
+
+@app.route('/chapters/<int:chapter_id>/tests')
+def test_list(chapter_id):
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+    
+    tests = Test.query.filter(Test.chapter_id == chapter_id, Test.is_active == True).all()
+    return render_template("test_list.html", tests=tests, chapter_id=chapter_id)
+
+
+@app.route('/tests/<int:test_id>')
+def test_detail(test_id):
+    test = Test.query.get(test_id)
+    if not test or not test.is_active:
+        return redirect('/')
+
+    chapter = test.chapter
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    return render_template("test_detail.html", test=test)
+
+@app.route("/chapters/<int:chapter_id>/tests/add", methods=["GET", "POST"])
+def add_test(chapter_id):
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    if request.method == "POST":
+        test_name = request.form.get("test_name")
+        description = request.form.get("description")
+        total_score = request.form.get("total_score", 10, type=float)
+
+        if not test_name:
+            return render_template("create_test.html", chapter_id=chapter_id, err_msg="Vui lòng nhập tên bài thi!")
+
+        try:
+            new_test = Test(
+                name=test_name,
+                description=description,
+                chapter_id=chapter_id,
+                total_score=total_score
+            )
+            db.session.add(new_test)
+            db.session.flush()
+            
+            question_contents = request.form.getlist("question_content[]")
+            
+            for index, content in enumerate(question_contents):
+                if content.strip():
+                    question = Question(test_id=new_test.id, content=content)
+                    db.session.add(question)
+                    db.session.flush()
+
+                    choices = request.form.getlist(f"choice_answer_{index}[]")
+                    correct_choice_idx = request.form.get(f"correct_choice_{index}")
+
+                    for c_idx, choice_text in enumerate(choices):
+                        if choice_text.strip():
+                            is_true = (str(c_idx) == correct_choice_idx)
+                            choice = Choice(
+                                question_id=question.id,
+                                answer=choice_text,
+                                is_true=is_true
+                            )
+                            db.session.add(choice)
+
+            db.session.commit()
+            return redirect(f"/chapters/{chapter_id}/tests")
+
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template("create_test.html", chapter_id=chapter_id, err_msg="Có lỗi xảy ra khi tạo bài thi!")
+
+    return render_template("create_test.html", chapter_id=chapter_id)
+
+@app.route('/tests/<int:test_id>/delete', methods=['POST'])
+def delete_test(test_id):
+    test = Test.query.get(test_id)
+    if not test:
+        return redirect('/')
+    
+    chapter = test.chapter
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    try:
+        test.is_active = False  # Xóa mềm
+        db.session.commit()
+    except Exception as ex:
+        db.session.rollback()
+        print(ex)
+
+    return redirect(f"/chapters/{chapter.id}/tests")
+
+@app.route('/tests/<int:test_id>/clone', methods=['GET', 'POST'])
+def clone_test(test_id):
+    source_test = Test.query.get(test_id)
+    if not source_test or not source_test.is_active:
+        return redirect('/')
+
+    chapter = source_test.chapter
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    if request.method == "POST":
+        test_name = request.form.get("test_name")
+        description = request.form.get("description")
+        total_score = request.form.get("total_score", 10, type=float)
+
+        if not test_name:
+            return render_template("create_test.html", chapter_id=chapter.id, source_test=source_test, err_msg="Vui lòng nhập tên bài thi!")
+
+        try:
+
+            new_test = Test(
+                name=test_name,
+                description=description,
+                chapter_id=chapter.id,
+                total_score=total_score
+            )
+            db.session.add(new_test)
+            db.session.flush()
+
+
+            question_contents = request.form.getlist("question_content[]")
+            for index, content in enumerate(question_contents):
+                if content.strip():
+                    question = Question(test_id=new_test.id, content=content)
+                    db.session.add(question)
+                    db.session.flush()
+
+                    choices = request.form.getlist(f"choice_answer_{index}[]")
+                    correct_choice_idx = request.form.get(f"correct_choice_{index}")
+
+                    for c_idx, choice_text in enumerate(choices):
+                        if choice_text.strip():
+                            is_true = (str(c_idx) == correct_choice_idx)
+                            choice = Choice(
+                                question_id=question.id,
+                                answer=choice_text,
+                                is_true=is_true
+                            )
+                            db.session.add(choice)
+
+            db.session.commit()
+            return redirect(f"/chapters/{chapter.id}/tests")
+
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template("create_test.html", chapter_id=chapter.id, source_test=source_test, err_msg="Có lỗi xảy ra khi tạo bản sao bài thi!")
+
+
+    return render_template("create_test.html", chapter_id=chapter.id, source_test=source_test)
 
 
 if __name__ == '__main__':
