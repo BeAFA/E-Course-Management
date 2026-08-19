@@ -15,35 +15,46 @@
         <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
     </div>
 </section>
-<div class="d-flex flex-row-reverse mt-3">
+
+<main class="main-container">
     <section class="course-intro-section">
         <div class="intro-right">
             <button type="button" class="btn-ask-teacher" id="btnAskTeacher">
                 <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
             </button>
         </div>
-        <a href="{{ url_for('add_lesson', chapter_id=chapter_id) }}" class="btn-custom">
+        <a href="{{ url_for('create_or_update_lesson', chapter_id=chapter_id) }}" class="btn-custom">
             <i class="fa-solid fa-user-plus"></i> Tạo bài học mới
         </a>
     </section>
-</div>
-{% if lessons %}
-{% for lesson in lessons %}
-<main class="main-container">
-    <section class="course-banner">
-        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id)}}" class="lesson-link" data-type="doc"
-           data-title="{{ lesson.title }}">
-            <h1 class="course-title">{{ loop.index }}.{{ lesson.title }}</h1>
-        </a>
-            <span class="status-badge video">Bài học</span>
-    </section>
+
+    <div class="course-modules">
+        <div class="module-card">
+            <div class="module-header">
+                <span class="module-title">
+                    <i class="fa-solid fa-book-open"></i> Bài học
+                </span>
+            </div>
+            <div class="module-body">
+                {% if lessons %}
+                {% for lesson in lessons %}
+                <div class="lesson-item">
+                    <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link"
+                       data-type="doc" data-title="{{ lesson.title }}">
+                        {{ loop.index }}.{{ lesson.title }}
+                    </a>
+                    <span class="status-badge video">Bài học</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
+                    Hiện chưa có bài giảng được đăng lên
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </main>
-{% endfor %}
-{% else %}
-<div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-    Hiện chưa có bài giảng được đăng lên
-</div>
-{% endif %}
 {% endblock %}
 {% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>

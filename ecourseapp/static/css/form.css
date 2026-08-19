@@ -108,6 +108,24 @@ button { width: 100%; padding: 10px; background: #007bff; color: white; border: 
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+.video-wrapper {
+    border: 1px dashed #d0d5dd;
+}
+
+.video-wrapper .preview-label {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #212529;
+    text-align: center;
+    background-color: #f9fafb;
+    border-bottom: 1px dashed #d0d5dd;
+    box-sizing: border-box;
+}
+
 .img-preview {
     width: 100%;
     display: flex;
@@ -142,6 +160,14 @@ button { width: 100%; padding: 10px; background: #007bff; color: white; border: 
 .form textarea {
     resize: vertical;
     min-height: 140px;
+}
+
+.form-group .ck-editor {
+    width: 100%;
+}
+
+.ck-editor__editable_inline {
+    min-height: 200px;
 }
 
 .form-actions {
