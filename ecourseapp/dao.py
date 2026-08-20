@@ -218,6 +218,27 @@ def get_teacher_chat_rooms(course_id, teacher_id):
 def get_chat_messages(room_id):
     return models.ChatRoomMessage.query.filter_by(chat_room_id=room_id).order_by(models.ChatRoomMessage.id.asc()).all()
 
+def check_enrollment(user_id, course_id):
+    """Kiểm tra học viên đã đăng ký khóa học này chưa"""
+    return models.Enrollment.query.filter_by(user_id=user_id, course_id=course_id).first()
+
+def enroll_course(user_id, course_id):
+    enrollment = models.Enrollment(user_id=user_id, course_id=course_id)
+    db.session.add(enrollment)
+    db.session.commit()
+    return enrollment
+
+def save_payment_history(user_id, course_id, transaction_id, price):
+    payment = models.PaymentHistory(
+        user_id=user_id,
+        course_id=course_id,
+        transaction_id=transaction_id,
+        payment_method=models.PaymentMethod.VNPAY, 
+        price=price
+    )
+    db.session.add(payment)
+    db.session.commit()
+
 
 def get_admin_dashboard_stats():
     commission_record = models.Commission.query.first()
