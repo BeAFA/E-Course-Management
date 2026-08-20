@@ -1,0 +1,35 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/test_result.css">
+
+<div class="result-wrapper">
+    <div class="result-card">
+        <div class="trophy-icon-wrapper">
+            <i class="fa-solid fa-award"></i>
+        </div>
+        <h2 class="result-title">Hoàn thành bài thi!</h2>
+        <div class="result-test-name">{{ test.name }}</div>
+
+        <div class="score-display-box">
+            <div class="score-label">Điểm số đạt được</div>
+            <div class="score-big-number">
+                {{ score }} <span class="score-max">/ {{ max_score }}</span>
+            </div>
+            <div class="stat-correct-text">
+                Đúng <strong>{{ correct_count }}</strong> / {{ total_questions }} câu hỏi
+            </div>
+        </div>
+
+        <div class="btn-actions-group">
+            <a href="/tests/{{ test.id }}/take" class="btn-retry">
+                <i class="fa-solid fa-rotate-right"></i> Làm lại
+            </a>
+            <a href="/courses/{{ test.chapter.course_id }}" class="btn-course-back">
+                <i class="fa-solid fa-house"></i> Về khóa học
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

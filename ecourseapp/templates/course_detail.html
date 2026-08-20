@@ -1,14 +1,16 @@
 {% extends 'layout/base.html' %}
 {% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+
 <section class="course-banner">
     <h1 class="course-title">{{ course.name | default('Tên khóa học') }}</h1>
     <div class="progress-box">
         <span>Tiến độ hoàn thành:</span>
         <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;"></div>
+            <div class="progress-bar-fill" id="courseProgressFill"></div>
         </div>
-        <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
+        <span class="progress-text" id="courseProgressText">{{ progress | default(35) }}%</span>
     </div>
 </section>
 
@@ -28,6 +30,7 @@
     </section>
 
     <div class="course-modules" id="courseModules">
+        
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
@@ -36,20 +39,24 @@
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
             </div>
             <div class="module-body">
-                {% if course.lessons and course.lessons|length > 0 %}
-                    {% for lesson in course.lessons %}
-                    <div class="lesson-item">
-                        <a class="lesson-link" data-type="doc" data-title="{{ lesson.name }}">
-                            {{ lesson.name }}
-                        </a>
-                        {% if lesson.description %}
-                            <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                                {{ lesson.description }}
-                            </span>
-                        {% else %}
+                {% set total_lessons = namespace(count=0) %}
+                {% if course.chapters %}
+                    {% for chapter in course.chapters %}
+                        {% set total_lessons.count = total_lessons.count + (chapter.lessons|length) %}
+                    {% endfor %}
+                {% endif %}
+
+                {% if total_lessons.count > 0 %}
+                    {% for chapter in course.chapters %}
+                        {% for lesson in chapter.lessons %}
+                        <div class="lesson-item">
+                            <a href="/lessons/{{ lesson.id }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
+                                {{ lesson.title }}
+                                <small style="color: #64748b; font-size: 0.85em;">(Chương: {{ chapter.name }})</small>
+                            </a>
                             <span class="status-badge video">Bài học</span>
-                        {% endif %}
-                    </div>
+                        </div>
+                        {% endfor %}
                     {% endfor %}
                 {% else %}
                     <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
@@ -59,6 +66,7 @@
             </div>
         </div>
 
+        
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
@@ -68,27 +76,33 @@
             </div>
             <div class="module-body">
                 {% set total_tests = namespace(count=0) %}
-                {% if course.lessons %}
-                    {% for lesson in course.lessons %}
-                        {% set total_tests.count = total_tests.count + (lesson.tests|length) %}
+                {% if course.chapters %}
+                    {% for chapter in course.chapters %}
+                        {% for test in chapter.tests %}
+                            {% if test.is_active %}
+                                {% set total_tests.count = total_tests.count + 1 %}
+                            {% endif %}
+                        {% endfor %}
                     {% endfor %}
                 {% endif %}
 
                 {% if total_tests.count > 0 %}
-                    {% for lesson in course.lessons %}
-                        {% for test in lesson.tests %}
-                        <div class="lesson-item">
-                            <a class="lesson-link" data-type="quiz" data-title="{{ test.name }}">
-                                {{ test.name }}
-                                <small style="color: #64748b; font-size: 0.85em;">(Thuộc: {{ lesson.name }})</small>
-                            </a>
-                            
-                            {% if test.total_score %}
-                                <span class="status-badge score">Điểm tối đa: {{ test.total_score }}</span>
-                            {% else %}
-                                <span class="status-badge pending">Chưa hoàn thành</span>
+                    {% for chapter in course.chapters %}
+                        {% for test in chapter.tests %}
+                            {% if test.is_active %}
+                            <div class="lesson-item">
+                                
+                                <a href="/tests/{{ test.id }}/take" class="lesson-link" data-type="quiz" data-title="{{ test.name }}">
+                                    {{ test.name }}
+                                    <small style="color: #64748b; font-size: 0.85em;">(Chương: {{ chapter.name }})</small>
+                                </a>
+                                {% if test.total_score %}
+                                    <span class="status-badge score">Điểm tối đa: {{ test.total_score }}</span>
+                                {% else %}
+                                    <span class="status-badge pending">Chưa hoàn thành</span>
+                                {% endif %}
+                            </div>
                             {% endif %}
-                        </div>
                         {% endfor %}
                     {% endfor %}
                 {% else %}
@@ -106,5 +120,6 @@
         Hỏi đáp<br>tự động<br>với AI
     </button>
 </div>
+
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

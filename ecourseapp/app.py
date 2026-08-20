@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login
 from services.drive_service import upload_file, credentials
-from models import User, UserRole, Level, Lesson, Chapter, Course, Question, Test, Choice
+from models import User, UserRole, Level, Lesson, Chapter, Course, Question, Test, Choice, UserTest
 import dao
 
 import admin
@@ -33,6 +33,7 @@ def course_detail(course_id):
         err_msg = "Không tìm thấy khóa học!"
 
     return render_template('course_detail.html', course=course, progress=35)
+
 
 
 @app.route('/courses/create', methods=['GET', 'POST'])
@@ -391,6 +392,63 @@ def test_detail(test_id):
         return redirect("/")
 
     return render_template("test_detail.html", test=test)
+
+@app.route('/tests/<int:test_id>/take', methods=['GET', 'POST'])
+def take_test(test_id):
+    if not current_user.is_authenticated:
+        return redirect('/login')
+
+    test = Test.query.get(test_id)
+    if not test or not test.is_active:
+        return redirect('/')
+
+    latest_result = (
+        UserTest.query
+        .filter_by(user_id=current_user.id, test_id=test.id)
+        .order_by(UserTest.id.desc())
+        .first()
+    )
+
+    if request.method == 'POST':
+        questions = test.questions
+        total_questions = len(questions)
+        correct_count = 0
+
+
+        for q in questions:
+            selected_choice_id = request.form.get(f'question_{q.id}')
+            if selected_choice_id:
+                choice = Choice.query.get(int(selected_choice_id))
+                if choice and choice.is_true:
+                    correct_count += 1
+
+        max_score = test.total_score or 10.0
+        final_score = round((correct_count / total_questions) * max_score, 2) if total_questions > 0 else 0.0
+
+
+        user_test = UserTest(
+            user_id=current_user.id,
+            test_id=test.id,
+            score=final_score
+        )
+        db.session.add(user_test)
+
+        try:
+            db.session.commit()
+            return render_template(
+                'test_result.html',
+                test=test,
+                score=final_score,
+                max_score=max_score,
+                correct_count=correct_count,
+                total_questions=total_questions
+            )
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template('take_test.html', test=test, previous_result=latest_result, err_msg="Có lỗi xảy ra khi nộp bài thi!")
+
+    return render_template('take_test.html', test=test, previous_result=latest_result)
 
 @app.route("/chapters/<int:chapter_id>/tests/add", methods=["GET", "POST"])
 def add_test(chapter_id):
