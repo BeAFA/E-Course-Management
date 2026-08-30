@@ -1,5 +1,5 @@
 from werkzeug.security import check_password_hash
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 from __init__ import db
 import models
@@ -16,7 +16,7 @@ def get_user_by_id(user_id):
     return models.User.query.get(user_id)
 
 
-def get_courses(kw=None, category_id=None):
+def get_courses(kw=None, category_id=None, rating_min=None, price_sort=None):
     query = db.session.query(
         models.Course,
         func.coalesce(func.avg(models.Rating.rating), 0).label('avg_rating'),
@@ -26,19 +26,34 @@ def get_courses(kw=None, category_id=None):
     ).filter(models.Course.is_active == True)
 
     if kw:
-        query = query.filter(models.Course.name.icontains(kw))
+        query = query.outerjoin(models.User, models.Course.teacher_id == models.User.id)
+        query = query.filter(or_(
+            models.Course.name.icontains(kw),
+            models.User.name.icontains(kw)
+        ))
+        
     if category_id:
         query = query.filter(models.Course.category_id == category_id)
 
     query = query.group_by(models.Course.id)
 
+    if rating_min:
+        query = query.having(func.coalesce(func.avg(models.Rating.rating), 0) >= float(rating_min))
+
+    if price_sort == 'asc':
+        query = query.order_by(models.Course.price.asc())
+    elif price_sort == 'desc':
+        query = query.order_by(models.Course.price.desc())
+    else:
+        query = query.order_by(models.Course.id.desc())
+
     results = query.all()
     courses = []
     for course, avg_rating, rating_count in results:
-        # Gắn tạm 2 thuộc tính không persist vào object Course
         course.avg_rating = round(float(avg_rating), 1)
         course.rating_count = rating_count
         courses.append(course)
+        
     return courses
 
 

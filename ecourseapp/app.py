@@ -208,10 +208,28 @@ def update_password():
     return render_template("change_password.html", user=current_user)
 
 
+# @app.route('/courses')
+# def get_all_courses():
+#     courses = dao.get_courses()
+#     return render_template("chapter.html", courses=courses)
 @app.route('/courses')
 def get_all_courses():
-    courses = dao.get_courses()
-    return render_template("chapter.html", courses=courses)
+    # Bắt các tham số
+    kw = request.args.get('kw')
+    rating_min = request.args.get('rating')  
+    price_sort = request.args.get('price_sort')
+    category_id = request.args.get('category_id') 
+    categories = dao.get_categories()
+    
+    # Lấy danh sách khóa học theo bộ lọc
+    courses = dao.get_courses(
+        kw=kw, 
+        category_id=category_id, 
+        rating_min=rating_min, 
+        price_sort=price_sort
+    )
+    
+    return render_template("courses.html", courses=courses, categories=categories)
 
 
 @app.route('/courses/my_courses')
