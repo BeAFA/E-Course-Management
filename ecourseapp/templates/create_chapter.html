@@ -1,23 +1,44 @@
 {%extends 'layout/base.html'%}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+{% endblock %}
 {%block content%}
-<link href="/static/css/form.css" rel="stylesheet">
-<body>
-{% if err_msg %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong>Lỗi:</strong> {{ err_msg }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}
-<div class="box">
-    <h2>Tạo chương mới</h2>
-    <form action="/courses/{{ course_id }}/chapters/add" method="POST">
-        <input type="text" name="name" placeholder="Tiêu đề" required>
-        <input type="text" name="description" placeholder="Miêu tả">
-        <button type="submit">Tạo chương mới</button>
-    </form>
-    <div class="link">
-        <a href="/courses/{{ course_id }}/chapters">Hủy</a>
+<main class="create-form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>{{ 'Sửa chương' if chapter else 'Tạo chương mới' }}</h1>
+        </div>
+
+        {% if err_msg %}
+        <div class="alert-error">
+            {{ err_msg }}
+        </div>
+        {% endif %}
+
+        <form method="POST"
+              action="{{ url_for('update_chapters', course_id=course_id, chapter_id=chapter.id) if chapter else url_for('add_chapters', course_id=course_id) }}"
+              class="form">
+            <div class="form-group">
+                <label for="name">Tiêu đề<span class="required">*</span></label>
+                <input type="text" id="name" name="name" placeholder="Ví dụ: Chương 1: Giới thiệu..."
+                       value="{{ chapter.name if chapter else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="description">Miêu tả</label>
+                <input type="text" id="description" name="description"
+                       placeholder="Miêu tả tổng quát chương"
+                       value="{{ chapter.description if chapter else '' }}">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">
+                    {{ 'Lưu thay đổi' if chapter else 'Tạo chương mới' }}
+                </button>
+                <a href="{{url_for('course_detail', course_id=course_id)}}" class="btn-cancel">Hủy</a>
+            </div>
+
+        </form>
     </div>
-</div>
-</body>
+</main>
 {%endblock%}

@@ -1,41 +1,70 @@
 {%extends 'layout/base.html'%}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+{% endblock %}
 {%block content%}
-<link rel="stylesheet" href="/static/css/form.css">
-<script src="/static/js/level_dropdown.js"></script>
-<body>
-<div class="box">
-    <h2>Thông tin tài khoản</h2>
-    <form action="/profile/updateprofile" method="POST">
-        <div>Họ và tên:</div>
-        <input type="text" name="name" value="{{ current_user.name }}" required>
-        <div>Email:</div>
-        <input type="email" name="email" value="{{ current_user.email }}" disabled>
-        <div>Trình độ:</div>
-        <div class="input-group mt-3 mb-3">
-            <button id="levelButton"
-                    type="button"
-                    class="btn btn-primary dropdown-toggle"
-                    data-bs-toggle="dropdown">
-                {{ current_user.level.value if current_user.level else "Chọn trình độ" }}
-            </button>
-            <ul class="dropdown-menu">
-                {% for level in levels %}
-                <li>
-                    <a class="dropdown-item"
-                       data-level="{{ level.value }}">
-                        {{ level.value }}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-            <input type="hidden" name="level" id="levelInput"
-                   value="{{ current_user.level.value if current_user.level else '' }}">
+<main class="create-form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1>Thông tin cá nhân</h1>
         </div>
-        <div>Ngành:</div>
-        <input type="text" name="major" value="{{ current_user.major if current_user.major else '' }}">
-        <button type="submit" class="btn btn-primary">Cập nhật thông tin</button>
-        <a href="/profile/updatepass" class="btn btn-primary mt-3"> Đổi mật khẩu</a>
-    </form>
-</div>
-</body>
+        {% if err_msg %}
+        <div class="alert-error">
+            {{ err_msg }}
+        </div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('update_profile') }}" class="form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" value="{{ current_user.email }}" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="name">Họ và tên<span class="required">*</span></label>
+                <input type="text" id="name" name="name" value="{{ current_user.name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="level">Trình độ</label>
+                <div class="input-group mt-3 mb-3">
+                    <button
+                            type="button"
+                            class="btn-submit dropdown-toggle"
+                            data-bs-toggle="dropdown">
+                        {{ current_user.level.value if current_user.level else "Chọn trình độ" }}
+                    </button>
+                    <ul class="dropdown-menu w-100 text-center">
+                        {% for level in levels %}
+                        <li>
+                            <a class="dropdown-item"
+                               data-level="{{ level.value }}">
+                                {{ level.value }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <input type="hidden" name="level" id="level"
+                           value="{{ current_user.level.value if current_user.level else '' }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="major">Ngành</label>
+                <input type="text" id="major" name="major"
+                       value="{{ current_user.major if current_user.major else '' }}">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">
+                    Cập nhật thông tin
+                </button>
+                <a href="{{ url_for('update_password') }}" class="btn-cancel">Đổi mật khẩu</a>
+            </div>
+
+        </form>
+    </div>
+</main>
 {%endblock%}
+{% block js %}
+<script src="/static/js/level_dropdown.js"></script>
+{% endblock %}

@@ -1,8 +1,10 @@
 {%extends 'layout/base.html'%}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
+{% endblock %}
 {%block content%}
-<link rel="stylesheet" href="/static/css/form.css">
 <body>
-<a href="/courses/{{ course_id }}/chapters/add" class="btn btn-primary">
+<a href="{{url_for('add_chapters', course_id=course_id)}}" class="btn btn-primary">
     <i class="fa-solid fa-user-plus"></i> Tạo chương mới
 </a>
 {% for chapter in chapters %}

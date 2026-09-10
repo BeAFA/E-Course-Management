@@ -1,32 +1,73 @@
 {% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="/static/css/form.css">
-
-<div class="container mt-3">
-    <div class="d-flex gap-2 mb-3">
-        <a href="/chapters/{{ chapter_id }}/lessons/add" class="btn btn-primary">
-            <i class="fa-solid fa-plus"></i> Tạo bài giảng
-        </a>
-        <a href="/chapters/{{ chapter_id }}/tests" class="btn btn-success">
-            <i class="fa-solid fa-file-lines"></i> Bài thi
-        </a>
+<section class="course-banner">
+    <h1 class="course-title">Danh sách bài học</h1>
+    <div class="progress-box">
+        <span>Tiến độ hoàn thành:</span>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;"></div>
+        </div>
+        <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
     </div>
+</section>
 
-    {% if lessons %}
-        {% for lesson in lessons %}
-        <a href="/lessons/{{ lesson.id }}" class="text-decoration-none">
-            <div class="card mb-3" style="width:400px">
-                <div class="card-body">
-                    <h4 class="card-title">{{ lesson.title }}</h4>
-                </div>
-                <div class="card-body">
-                    <h5 class="card-subtitle text-muted">{{ lesson.article|safe }}</h5>
-                </div>
-            </div>
+<main class="main-container">
+    <section class="course-intro-section">
+        <div class="intro-right">
+            <button type="button" class="btn-ask-teacher" id="btnAskTeacher">
+                <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
+            </button>
+        </div>
+        <a href="{{ url_for('create_or_update_lesson', chapter_id=chapter_id) }}" class="btn-custom">
+            <i class="fa-solid fa-plus"></i> Tạo bài học mới
         </a>
-        {% endfor %}
-    {% else %}
-        <h2>Chưa có bài giảng</h2>
-    {% endif %}
-</div>
+    </section>
+
+    <div class="course-modules">
+        <div class="module-card">
+            <div class="module-header" data-toggle="accordion">
+                <span class="module-title">
+                    <i class="fa-solid fa-book-open"></i> Bài học
+                </span>
+                <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+            </div>
+            <div class="module-body">
+                {% if chapter and chapter.lessons %}
+                    {% for lesson in chapter.lessons %}
+                    <div class="lesson-item">
+                        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
+                            {{ loop.index }}. {{ lesson.title }}
+                        </a>
+                        <span class="status-badge video">Bài học</span>
+                    </div>
+                    {% endfor %}
+                {% elif lessons %}
+                    {% for lesson in lessons %}
+                    <div class="lesson-item">
+                        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
+                            {{ loop.index }}. {{ lesson.title }}
+                        </a>
+                        <span class="status-badge video">Bài học</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
+                    Hiện chưa có bài giảng được đăng lên
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

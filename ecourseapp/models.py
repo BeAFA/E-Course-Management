@@ -1,5 +1,6 @@
 import enum
 from flask_login import UserMixin
+from sqlalchemy import func
 from __init__ import app, db
 
 
@@ -27,6 +28,7 @@ class Base(db.Model):
     __abstract__ = True
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     created_date = db.Column(db.DateTime, default=db.func.now())
+    updated_date = db.Column(db.DateTime, default=func.now(), onupdate=func.now())
     is_active = db.Column(db.Boolean, default=True)
 
 
@@ -36,6 +38,8 @@ class User(Base, UserMixin):
 
     email = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
+    img_drive_id = db.Column(db.String(100), nullable=True)
+    img_url = db.Column(db.String(500), nullable=True)
     name = db.Column(db.String(80), nullable=False)
     level = db.Column(db.Enum(Level), nullable=True)
     major = db.Column(db.String(80), nullable=True)
@@ -55,6 +59,7 @@ class User(Base, UserMixin):
     )
     enrollments = db.relationship("Enrollment", back_populates="user")
     payments = db.relationship("PaymentHistory", back_populates="user")
+    ratings = db.relationship("Rating", back_populates="user")
     
     def __str__(self):
         return self.name
@@ -87,6 +92,8 @@ class Tag(Base):
 class Course(Base):
     __tablename__ = "course"
 
+    img_drive_id = db.Column(db.String(100), nullable=True)
+    img_url = db.Column(db.String(500), nullable=True)
     name = db.Column(db.String(80), nullable=False)
     price = db.Column(db.Integer, nullable=True)
     category_id = db.Column(db.ForeignKey('category.id'), nullable=False)
@@ -107,9 +114,31 @@ class Course(Base):
     chats = db.relationship("ChatRoom", back_populates="course")
     enrollments = db.relationship("Enrollment", back_populates="course")
     payments = db.relationship("PaymentHistory", back_populates="course")
+    ratings = db.relationship("Rating", back_populates="course")
     
     def __str__(self):
         return self.name
+
+# ================= Rating =================
+class Rating(Base):
+    __tablename__ = "rating"
+
+    course_id = db.Column(db.ForeignKey('course.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    rating = db.Column(db.SmallInteger, nullable=False, default=5)
+    comment = db.Column(db.Text, nullable=True)
+
+
+    course = db.relationship("Course", back_populates="ratings")
+    user = db.relationship("User", back_populates="ratings")
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "course_id",
+            "user_id",
+            name="uq_course_user_rating"
+        ),
+    )
 
 
 # ================= Course - Tag =================
@@ -143,9 +172,10 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    tests = db.relationship(
+    test = db.relationship(
         "Test",
         back_populates="chapter",
+        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -159,6 +189,8 @@ class Lesson(Base):
     __tablename__ = "lesson"
 
     chapter_id = db.Column(db.ForeignKey("chapter.id", ondelete="CASCADE"), nullable=False)
+    img_drive_id = db.Column(db.String(100), nullable=True)
+    img_url = db.Column(db.String(500), nullable=True)
     title = db.Column(db.String(200), nullable=False)
     video_drive_id = db.Column(db.String(100), nullable=True)
     video_url = db.Column(db.String(500), nullable=True)
@@ -177,10 +209,10 @@ class Test(Base):
 
     name = db.Column(db.String(80), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False)
+    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False, unique=True)
     total_score = db.Column(db.Float, nullable=True)
 
-    chapter = db.relationship("Chapter", back_populates="tests")
+    chapter = db.relationship("Chapter", back_populates="test")
 
     questions = db.relationship(
         "Question",

@@ -1,44 +1,62 @@
-{%extends 'layout/base.html'%}
-{%block content%}
-<link rel="stylesheet" href="/static/css/form.css">
-<script src="/static/js/video_support.js"></script>
+{% extends 'layout/base.html' %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lesson_detail.css') }}">
+{% endblock %}
+{% block content %}
+
+<section class="course-banner">
+    <h1 class="course-title">{{ lesson.title if lesson else 'Chi tiết bài học' }}</h1>
+    <a href="{{ url_for('create_or_update_lesson', lesson_id=lesson.id) }}" class="btn-custom">
+        <i class="fa-solid fa-pen"></i> Sửa bài giảng
+    </a>
+</section>
+
+<main class="lesson-detail-container">
+    {% if lesson %}
+    <div class="lesson-detail-card">
+        {% if lesson.video_drive_id %}
+        <div class="video-wrapper">
+            <video id="lessonVideo" controls src="/media/video/{{ lesson.video_drive_id }}">
+                Trình duyệt của bạn không hỗ trợ video.
+            </video>
+        </div>
+        {% endif %}
+
+        {% if lesson.article %}
+        <div class="article-content">
+            {{ lesson.article | safe }}
+        </div>
+        {% endif %}
+
+        {% if not lesson.video_drive_id and not lesson.article %}
+        <div class="lesson-empty-state">
+            Bài học này chưa có nội dung video hoặc bài viết.
+        </div>
+        {% endif %}
+
+        <!--    {% if lesson.file_url %}-->
+        <!--    <div class="lesson-file">-->
+        <!--        <a href="https://drive.google.com/uc?export=download&id={{ lesson.file_drive_id }}"-->
+        <!--           target="_blank" class="btn-custom">-->
+        <!--            📄 Tải tài liệu bài học-->
+        <!--        </a>-->
+        <!--    </div>-->
+        <!--    {% endif %}-->
+    </div>
+    {% else %}
+    <div class="lesson-empty-state">
+        Chưa có nội dung
+    </div>
+    {% endif %}
+</main>
+{% endblock %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/video_support.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         initVideoControls('lessonVideo');
     });
 </script>
-<body>
-<a href="/chapters/{{ chapter_id }}/lessons/add" class="btn btn-primary">
-    <i class="fa-solid fa-user-plus"></i> Sửa bài giảng
-</a>
-{% if lesson %}
-<div class="box">
-    <h2>{{ lesson.title }}</h2>
-    {% if lesson.video_drive_id %}
-    <div class="video-wrapper" style="position:relative; max-width:800px; margin-bottom:20px;">
-        <video id="lessonVideo" style="width:100%; display:block; background:#000;" controls
-               src="/media/video/{{ lesson.video_drive_id }}">
-            Trình duyệt của bạn không hỗ trợ video.
-        </video>
-    </div>
-    {% endif %}
-
-    {% if lesson.article %}
-    <div class="article-content">
-        {{ lesson.article | safe }}
-    </div>
-    {% endif %}
-    {% if lesson.file_url %}
-    <div class="lesson-file">
-        <a href="https://drive.google.com/uc?export=download&id={{ lesson.file_drive_id }}"
-           target="_blank" class="btn btn-outline-primary">
-            📄 Tải tài liệu bài học
-        </a>
-    </div>
-    {% endif %}
-</div>
-{% else %}
-<h2>Chưa có nội dung</h2>
-{% endif %}
-</body>
-{%endblock%}
+{% endblock %}

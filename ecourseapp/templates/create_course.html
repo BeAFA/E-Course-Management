@@ -1,11 +1,18 @@
 {% extends 'layout/base.html' %}
-{% block content %}
+{% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/create_course.css') }}">
+{% endblock %}
+{% block content %}
 <main class="create-course-container">
     <div class="form-card">
         <div class="form-header">
+            {% if course %}
+            <h1>Chỉnh sửa khóa học</h1>
+            <p>Cập nhật thông tin khóa học của bạn</p>
+            {% else %}
             <h1>Đăng khóa học mới</h1>
             <p>Chia sẻ kiến thức của bạn tới cộng đồng học viên</p>
+            {% endif %}
         </div>
 
         {% if err_msg %}
@@ -14,39 +21,68 @@
         </div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('create_course') }}" class="course-form">
+        <form method="POST"
+              action="{{ url_for('update_course', course_id=course.id) if course else url_for('create_course') }}"
+              class="course-form" enctype="multipart/form-data">
+
             <div class="form-group">
                 <label for="name">Tên khóa học <span class="required">*</span></label>
-                <input type="text" id="name" name="name" placeholder="Ví dụ: Lập trình Python" required>
+                <input type="text" id="name" name="name"
+                       value="{{ course.name if course else '' }}"
+                       placeholder="Ví dụ: Lập trình Python" required>
             </div>
 
             <div class="form-group">
                 <label for="category_id">Danh mục <span class="required">*</span></label>
                 <select id="category_id" name="category_id" required>
-                    <option value="" disabled selected>-- Chọn danh mục --</option>
+                    <option value="" disabled {% if not course %}selected{% endif %}>-- Chọn danh mục --</option>
                     {% for cat in categories %}
-                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    <option value="{{ cat.id }}"
+                            {% if course and course.category_id== cat.id %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="price">Giá tiền (VNĐ)</label>
-                <input type="number" id="price" name="price" min="0" step="1000" placeholder="Ví dụ: 500000 (Để 0 nếu miễn phí)">
+                <input type="number" id="price" name="price" min="0" step="1000"
+                       value="{{ course.price if course else '' }}"
+                       placeholder="Ví dụ: 500000 (Để 0 nếu miễn phí)">
             </div>
 
             <div class="form-group">
                 <label for="description">Mô tả khóa học</label>
-                <textarea id="description" name="description" rows="6" placeholder="Giới thiệu nội dung, mục tiêu và yêu cầu đầu vào của khóa học..."></textarea>
+                <textarea id="description" name="description" rows="6"
+                          placeholder="Giới thiệu nội dung, mục tiêu và yêu cầu đầu vào của khóa học...">{{ course.description if course else '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="img">Ảnh khóa học</label>
+                {% if course and course.img_drive_id %}
+                <div class="img-preview">
+                    <img src="https://drive.google.com/thumbnail?id={{ course.img_drive_id }}&sz=w400"
+                         alt="Ảnh hiện tại" class="preview-thumb">
+                </div>
+                {% endif %}
+                <div class="img-preview" id="new-img-preview" style="display: none;">
+                    <p class="preview-label">Ảnh sau khi thay đổi</p>
+                    <img id="new-img-thumb" class="preview-thumb" src="" alt="Ảnh mới">
+                </div>
+                <input type="file" id="img" name="img" {% if not course %}required{% endif %}>
             </div>
 
             <div class="form-actions">
-                <a href="{{ url_for('home') }}" class="btn-cancel">Hủy bỏ</a>
+                <a href="{{ url_for('get_my_course') }}" class="btn-cancel">Hủy bỏ</a>
                 <button type="submit" class="btn-submit">
-                    Đăng khóa học
+                    {{ "Cập nhật khóa học" if course else "Đăng khóa học" }}
                 </button>
             </div>
         </form>
     </div>
 </main>
+{% endblock %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/img_pre_update.js') }}"></script>
 {% endblock %}

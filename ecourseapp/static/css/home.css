@@ -295,9 +295,7 @@ body {
     fill: var(--gold);
 }
 
-.stars svg.empty {
-    fill: var(--line);
-}
+.stars svg.empty { stroke: #ccc; fill: none; }
 
 .course-name {
     font-size: 18px; 

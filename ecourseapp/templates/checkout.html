@@ -1,0 +1,57 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/checkout.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="checkout-container">
+    <div class="checkout-card">
+        <div class="checkout-header">
+            <h2>Xác nhận Đăng ký Khóa học</h2>
+        </div>
+
+        <div class="course-summary">
+            <div class="course-info">
+                <h3>{{ course.name }}</h3>
+                <p>Giảng viên: <strong>{{ course.teacher.name }}</strong></p>
+                <p>Danh mục: {{ course.category.name }}</p>
+            </div>
+            <div class="course-price">
+                {% if course.price and course.price > 0 %}
+                <span class="price-value">{{ "{:,.0f}".format(course.price).replace(',', '.') }} ₫</span>
+                {% else %}
+                <span class="price-free">Miễn phí</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="payment-method-section">
+            <h4>Phương thức thanh toán</h4>
+            {% if course.price and course.price > 0 %}
+            <label class="payment-option selected">
+                <input type="radio" name="payment_method" value="VNPAY" checked>
+                <!-- Logo VNPAY chuẩn -->
+                <img src="https://vnpay.vn/s1/statics.vnpay.vn/2023/6/oxqp2a0q51s1686814746087.png" alt="VNPAY"
+                    class="payment-logo">
+                <span>Thanh toán quét mã QR / Thẻ ATM / Visa qua VNPAY</span>
+            </label>
+            {% else %}
+            <div class="payment-free-notice">
+                <i class="fa-solid fa-gift"></i> Khóa học này miễn phí, bạn có thể tham gia ngay!
+            </div>
+            {% endif %}
+        </div>
+
+        <form action="{{ url_for('process_checkout', course_id=course.id) }}" method="POST">
+            <button type="submit" class="btn-checkout">
+                {% if course.price and course.price > 0 %}
+                Thanh toán bằng VNPAY
+                {% else %}
+                Vào học ngay
+                {% endif %}
+            </button>
+        </form>
+    </div>
+</main>
+{% endblock %}
