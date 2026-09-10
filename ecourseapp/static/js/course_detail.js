@@ -1,12 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Tự động cập nhật thanh tiến độ từ data-progress
+    const progressFill = document.getElementById('courseProgressFill');
+    if (progressFill) {
+        const progressVal = progressFill.getAttribute('data-progress') || '35';
+        progressFill.style.width = progressVal + '%';
+    }
+
+    // 2. Xử lý đóng/mở Accordion (Bài giảng / Bài kiểm tra)
     const moduleHeaders = document.querySelectorAll('[data-toggle="accordion"]');
     moduleHeaders.forEach(header => {
         header.addEventListener('click', () => {
             const card = header.closest('.module-card');
-            card.classList.toggle('collapsed');
+            if (card) {
+                card.classList.toggle('collapsed');
+            }
         });
     });
 
+    // 3. Tìm kiếm bài giảng/bài thi theo từ khóa
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         const lessonItems = document.querySelectorAll('.lesson-item');
@@ -22,29 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-//    const lessonLinks = document.querySelectorAll('.lesson-link');
-//    lessonLinks.forEach(link => {
-//        link.addEventListener('click', (e) => {
-//            e.preventDefault();
-//            const title = link.getAttribute('data-title') || link.textContent.trim();
-//            const type = link.getAttribute('data-type');
-//
-//            if (type === 'video') {
-//                alert(`Đang mở video bài giảng: "${title}"`);
-//            } else if (type === 'quiz') {
-//                alert(`Bắt đầu làm: "${title}"`);
-//            } else if (type === 'essay') {
-//                alert(`Khu vực nộp bài cho: "${title}"`);
-//            } else if (type === 'exam') {
-//                if (confirm(`Bạn chuẩn bị làm "${title}". Thời gian sẽ được tính ngay khi bắt đầu. Tiếp tục?`)) {
-//                    alert('Đang tải đề thi...');
-//                }
-//            } else {
-//                alert(`Đang mở tài liệu: "${title}"`);
-//            }
-//        });
-//    });
-
+    // 4. Hỏi đáp với giảng viên
     const btnAskTeacher = document.getElementById('btnAskTeacher');
     if (btnAskTeacher) {
         btnAskTeacher.addEventListener('click', () => {
@@ -55,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 5. Trợ lý AI
     const btnAiChat = document.getElementById('btnAiChat');
     if (btnAiChat) {
         btnAiChat.addEventListener('click', () => {
@@ -65,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 6. Nút Đăng xuất
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
         btnLogout.addEventListener('click', (e) => {

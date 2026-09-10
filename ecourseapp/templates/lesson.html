@@ -1,16 +1,18 @@
 {% extends 'layout/base.html' %}
+
 {% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
 {% endblock %}
+
 {% block content %}
 <section class="course-banner">
     <h1 class="course-title">Danh sách bài học</h1>
     <div class="progress-box">
         <span>Tiến độ hoàn thành:</span>
         <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill"
-                 style="width: {{ progress | default('35') }}%;"></div>
+            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;"></div>
         </div>
         <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
     </div>
@@ -24,28 +26,37 @@
             </button>
         </div>
         <a href="{{ url_for('create_or_update_lesson', chapter_id=chapter_id) }}" class="btn-custom">
-            <i class="fa-solid fa-user-plus"></i> Tạo bài học mới
+            <i class="fa-solid fa-plus"></i> Tạo bài học mới
         </a>
     </section>
 
     <div class="course-modules">
         <div class="module-card">
-            <div class="module-header">
+            <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
                     <i class="fa-solid fa-book-open"></i> Bài học
                 </span>
+                <i class="fa-solid fa-caret-down module-toggle-icon"></i>
             </div>
             <div class="module-body">
-                {% if lessons %}
-                {% for lesson in lessons %}
-                <div class="lesson-item">
-                    <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link"
-                       data-type="doc" data-title="{{ lesson.title }}">
-                        {{ loop.index }}.{{ lesson.title }}
-                    </a>
-                    <span class="status-badge video">Bài học</span>
-                </div>
-                {% endfor %}
+                {% if chapter and chapter.lessons %}
+                    {% for lesson in chapter.lessons %}
+                    <div class="lesson-item">
+                        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
+                            {{ loop.index }}. {{ lesson.title }}
+                        </a>
+                        <span class="status-badge video">Bài học</span>
+                    </div>
+                    {% endfor %}
+                {% elif lessons %}
+                    {% for lesson in lessons %}
+                    <div class="lesson-item">
+                        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
+                            {{ loop.index }}. {{ lesson.title }}
+                        </a>
+                        <span class="status-badge video">Bài học</span>
+                    </div>
+                    {% endfor %}
                 {% else %}
                 <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
                     Hiện chưa có bài giảng được đăng lên
@@ -56,6 +67,7 @@
     </div>
 </main>
 {% endblock %}
+
 {% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

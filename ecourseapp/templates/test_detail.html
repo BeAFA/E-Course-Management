@@ -1,0 +1,58 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/test_detail.css">
+
+<div class="test-detail-wrapper">
+    <div class="test-detail-header">
+        <div>
+            <h2><i class="fa-solid fa-file-circle-check"></i> Chi Tiết Bài Thi: {{ test.name }}</h2>
+            <div class="test-detail-header-sub">{{ test.description or 'Không có mô tả.' }}</div>
+        </div>
+        <a href="/chapters/{{ test.chapter_id }}/tests" class="btn-back-nav">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-card-title">
+            <span><i class="fa-solid fa-circle-info text-primary" style="margin-right: 6px;"></i> Thông tin tổng quan</span>
+            <span class="badge-pill">Thang điểm: {{ test.total_score or 10 }}</span>
+        </div>
+        <p class="text-muted mb-0" style="font-size: 14px;"><strong>Tổng số câu hỏi:</strong> {{ test.questions|length }} câu</p>
+    </div>
+
+    <div id="questions-container">
+        {% for q in test.questions %}
+        <div class="detail-card">
+            <div class="detail-card-title">
+                <span class="badge-pill">Câu {{ loop.index }}: {{ q.content }}</span>
+            </div>
+
+            <label class="section-sublabel">Danh sách đáp án:</label>
+            <div class="choices-container">
+                {% for c in q.choices %}
+                <div class="choice-preview-row {% if c.is_true %}is-correct{% endif %}">
+                    <span class="status-tag {% if c.is_true %}correct{% endif %}">
+                        {% if c.is_true %}
+                            <i class="fa-solid fa-circle-check"></i> ĐÁP ÁN ĐÚNG
+                        {% else %}
+                            <i class="fa-regular fa-circle"></i> Lựa chọn
+                        {% endif %}
+                    </span>
+                    <span class="choice-preview-text {% if c.is_true %}bold-correct{% endif %}">
+                        {{ c.answer }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="detail-card text-center py-4" style="text-align: center !important;">
+            <p class="text-muted mb-0">Bài thi này chưa có câu hỏi nào.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

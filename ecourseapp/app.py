@@ -10,7 +10,7 @@ from datetime import datetime
 
 from __init__ import app, db, login, VNPAY_CONFIG
 from services.drive_service import upload_file, credentials, delete_file
-from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag, ChatRoom, ChatRoomMessage
+from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag, ChatRoom, ChatRoomMessage, Question, Test, Choice, UserTest
 import dao
 from vnpay import vnpay
 
@@ -208,10 +208,6 @@ def update_password():
     return render_template("change_password.html", user=current_user)
 
 
-# @app.route('/courses')
-# def get_all_courses():
-#     courses = dao.get_courses()
-#     return render_template("chapter.html", courses=courses)
 @app.route('/courses')
 def get_all_courses():
     # Bắt các tham số
@@ -284,7 +280,6 @@ def rate_course(course_id):
 
     rating, err = dao.add_or_update_rating(current_user.id, course_id, rating_value, comment)
     if err:
-        # có thể flash message thay vì render tay
         pass
 
     return redirect(f'/courses/{course_id}')
@@ -293,13 +288,6 @@ def rate_course(course_id):
 @app.route('/courses/create', methods=['GET', 'POST'])
 def create_course():
     err_msg = ""
-    # Xóa các comment ở dưới nếu muốn kiểm tra đăng nhập và quyền
-    # if not current_user.is_authenticated:
-    #     return redirect('/login')
-
-    # if current_user.role != UserRole.TEACHER:
-    #     err_msg = "Yêu cầu tài khoản với quyền là giảng viên"
-
     categories = dao.get_categories()
 
     if request.method == 'POST':
@@ -307,7 +295,6 @@ def create_course():
         price = request.form.get('price')
         category_id = request.form.get('category_id')
         description = request.form.get('description')
-        # tag_ids = request.form.getlist("tag_ids")
 
         img_drive_id = DEFAULT_COURSE_IMG_DRIVE_ID
         img_url = DEFAULT_COURSE_IMG_URL
@@ -324,9 +311,8 @@ def create_course():
             os.remove(filepath)
 
             if uploaded_id is None:
-                return render_template("create_course.html", err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
+                return render_template("create_course.html", categories=categories, err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
 
-            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
             img_drive_id = uploaded_id
             img_url = uploaded_url
 
@@ -342,7 +328,6 @@ def create_course():
                     teacher_id=current_user.id,
                     img_drive_id=img_drive_id,
                     img_url=img_url
-                    # tag_ids=tag_ids
                 )
                 return redirect(f'/courses/{new_course.id}')
             except Exception as ex:
@@ -359,13 +344,13 @@ def update_course(course_id):
 
     err_msg = ""
     course = dao.get_course_by_id(course_id)
+    if course is None:
+        err_msg="Khóa học không tồn tại"
+        return render_template("my_courses.html", err_msg=err_msg)
+
     if not dao.is_course_owner(current_user, course):
         err_msg = "Bạn không có quyền chỉnh sửa khóa học này"
         return render_template("home.html", err_msg=err_msg)
-
-    if course is None:
-        err_msg="Khóa học không tồn tại"
-        return render_template("my_course.html", err_msg=err_msg)
 
     categories = dao.get_categories()
 
@@ -374,7 +359,6 @@ def update_course(course_id):
         price = request.form.get('price')
         category_id = request.form.get('category_id')
         description = request.form.get('description')
-        # tag_ids = request.form.getlist("tag_ids")
 
         img_drive_id = course.img_drive_id
         img_url = course.img_url
@@ -386,7 +370,6 @@ def update_course(course_id):
             filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
             img.save(filepath)
 
-            # Tải ảnh mới của người dùng lên Drive
             uploaded_id, uploaded_url = upload_file(filepath, filename)
             os.remove(filepath)
 
@@ -394,7 +377,6 @@ def update_course(course_id):
                 err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại."
                 return render_template("create_course.html", course=course, categories=categories, err_msg=err_msg)
 
-            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
             img_drive_id = uploaded_id
             img_url = uploaded_url
 
@@ -402,16 +384,17 @@ def update_course(course_id):
             err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
             return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
         try:
-            dao.update_course(course,name,price,category_id,description,img_drive_id,img_url, tag_ids=None)
+            dao.update_course(course, name, price, category_id, description, img_drive_id, img_url, tag_ids=None)
             db.session.commit()
             return redirect(f'/courses/{course.id}')
         except Exception as ex:
             db.session.rollback()
             print(ex)
-            err_msg = "Có lỗi xảy ra khi đăng khóa học. Vui lòng thử lại sau!"
+            err_msg = "Có lỗi xảy ra khi cập nhật khóa học. Vui lòng thử lại sau!"
             return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
 
     return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
+
 
 @app.route('/courses/bulk-update-status', methods=['POST'])
 def bulk_update_course_status():
@@ -446,7 +429,8 @@ def add_chapters(course_id):
         description = request.form.get("description")
 
         if not name:
-            return render_template("create_chapter.html", course_id=course_id,
+            chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
+            return render_template("create_chapter.html", chapters=chapter_list, course_id=course_id,
                                    err_msg="Bạn phải đặt tên cho chương")
 
         chapter = Chapter(
@@ -468,6 +452,7 @@ def add_chapters(course_id):
     chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
     return render_template("create_chapter.html", chapters=chapter_list, course_id=course_id)
 
+
 @app.route('/courses/<int:course_id>/chapters/<int:chapter_id>/update', methods=["GET", "POST"])
 def update_chapters(course_id, chapter_id):
     if not current_user.is_authenticated:
@@ -475,7 +460,7 @@ def update_chapters(course_id, chapter_id):
 
     course = dao.get_course_by_id(course_id)
     is_owner = dao.is_course_owner(current_user, course)
-    if not dao.is_course_owner(current_user, course):
+    if not is_owner:
         return render_template("course_detail.html", course=course, is_owner=is_owner,
                                 err_msg="Bạn không có quyền chỉnh sửa khóa học này")
 
@@ -489,10 +474,9 @@ def update_chapters(course_id, chapter_id):
         description = request.form.get("description")
 
         if not name:
-            chapter.name = name
-            chapter.description = description
+            chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
             return render_template("create_chapter.html", chapter=chapter,
-                                   course_id=course_id,
+                                   chapters=chapter_list, course_id=course_id,
                                    err_msg="Bạn phải đặt tên cho chương")
         try:
             dao.update_chapter(chapter, name, description)
@@ -505,8 +489,7 @@ def update_chapters(course_id, chapter_id):
 
     chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
     return render_template("create_chapter.html", chapter=chapter,
-                            chapters=chapter_list, course_id=course_id)
-
+                           chapters=chapter_list, course_id=course_id)
 
 
 @app.route('/lessons/<int:chapter_id>')
@@ -519,9 +502,7 @@ def lessons(chapter_id):
         return redirect(url_for('get_all_courses')) 
         
     course_id = chapter.course_id
-    
     is_owner = dao.is_course_owner(current_user, chapter.course)
-    
     is_enrolled = dao.check_enrollment(current_user.id, course_id)
     
     if not is_owner and not is_enrolled:
@@ -544,7 +525,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
             return redirect("/")
         chapter_id = lesson.chapter_id
     else:
-        # --- CHẾ ĐỘ TẠO MỚI ---
         chapter = dao.get_chapter_by_id(chapter_id)
         if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
             return redirect("/")
@@ -609,8 +589,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
             file_replaced = True
 
         # ====== ẢNH ======
-        # Nếu tạo mới và không upload ảnh -> dùng ảnh mặc định
-        # Nếu sửa và không upload ảnh mới -> giữ ảnh hiện tại
         img_drive_id = lesson.img_drive_id if lesson else DEFAULT_LESSON_IMG_DRIVE_ID
         img_url = lesson.img_url if lesson else DEFAULT_LESSON_IMG_URL
         old_img_drive_id = img_drive_id
@@ -637,7 +615,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
         article = request.form.get("article")
 
         if lesson:
-            # Cập nhật bản ghi hiện có
             lesson.title = title
             lesson.video_drive_id = video_drive_id
             lesson.video_url = video_url
@@ -647,7 +624,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
             lesson.img_drive_id = img_drive_id
             lesson.img_url = img_url
         else:
-            # Tạo bản ghi mới
             lesson = Lesson(
                 chapter_id=chapter_id,
                 title=title,
@@ -667,7 +643,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
             db.session.rollback()
             print(ex)
 
-            # Lỗi khi lưu DB -> dọn rác các file MỚI vừa upload (nếu có)
             if video_replaced:
                 try:
                     delete_file(video_drive_id)
@@ -690,7 +665,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
                 err_msg="Lưu bài học thất bại, vui lòng thử lại."
             )
 
-        # Lưu thành công -> nếu là chế độ SỬA và có thay thế file, xóa file CŨ trên Drive
         if lesson_id:
             if video_replaced and old_video_drive_id:
                 try:
@@ -715,6 +689,7 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
         chapter_id=chapter_id, lesson_id=lesson_id, lesson=lesson
     )
 
+
 @app.route("/lessons/<int:lesson_id>", methods=["GET", "POST"])
 def lesson_detail(lesson_id):
     lesson = dao.get_lesson_by_id(lesson_id)
@@ -722,16 +697,15 @@ def lesson_detail(lesson_id):
         return redirect("/")
     return render_template("lesson_detail.html", lesson=lesson)
 
+
 @app.route("/media/video/<file_id>")
 def stream_video(file_id):
-    # Làm mới access token nếu đã hết hạn
     if not credentials.valid:
         credentials.refresh(GoogleAuthRequest())
 
     drive_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
     headers = {"Authorization": f"Bearer {credentials.token}"}
 
-    # Chuyển tiếp header Range (để hỗ trợ tua video) từ trình duyệt sang Drive
     range_header = request.headers.get("Range")
     if range_header:
         headers["Range"] = range_header
@@ -750,9 +724,10 @@ def stream_video(file_id):
         resp.headers["Content-Length"] = r.headers["Content-Length"]
 
     resp.headers["Accept-Ranges"] = "bytes"
-    resp.headers["Content-Disposition"] = "inline"  # ép phát trực tiếp, không tải file
+    resp.headers["Content-Disposition"] = "inline"
 
     return resp
+
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -836,6 +811,7 @@ def open_chat_room(room_id):
         student_rooms=student_rooms
     )
 
+
 @app.route('/checkout/<int:course_id>')
 @login_required 
 def checkout(course_id):
@@ -851,7 +827,7 @@ def checkout(course_id):
         
     return render_template('checkout.html', course=course)
 
-# --- 2. XỬ LÝ CHUYỂN HƯỚNG SANG VNPAY ---
+
 @app.route('/checkout/<int:course_id>/process', methods=['POST'])
 @login_required
 def process_checkout(course_id):
@@ -866,7 +842,7 @@ def process_checkout(course_id):
     vnp.requestData['vnp_Version'] = '2.1.0'
     vnp.requestData['vnp_Command'] = 'pay'
     vnp.requestData['vnp_TmnCode'] = VNPAY_CONFIG['vnp_TmnCode']
-    vnp.requestData['vnp_Amount'] = int(course.price) * 100 # VNPAY bắt buộc nhân 100
+    vnp.requestData['vnp_Amount'] = int(course.price) * 100
     vnp.requestData['vnp_CurrCode'] = 'VND'
     
     txn_ref = f"{current_user.id}-{course.id}-{int(datetime.now().timestamp())}"
@@ -881,14 +857,13 @@ def process_checkout(course_id):
     vnpay_payment_url = vnp.get_payment_url(VNPAY_CONFIG['vnp_Url'], VNPAY_CONFIG['vnp_HashSecret'])
     return redirect(vnpay_payment_url)
 
-# --- NHẬN KẾT QUẢ TỪ VNPAY ---
+
 @app.route('/payment/vnpay_return')
 def vnpay_return():
     vnp = vnpay()
     vnp.responseData = request.args.to_dict()
     
     if vnp.validate_response(VNPAY_CONFIG['vnp_HashSecret']):
-        # Mã '00' nghĩa là giao dịch thành công
         if vnp.responseData['vnp_ResponseCode'] == '00': 
             txn_ref = vnp.responseData['vnp_TxnRef']
             user_id, course_id, _ = txn_ref.split('-')
@@ -906,6 +881,221 @@ def vnpay_return():
     else:
         flash("Lỗi bảo mật: Dữ liệu thanh toán không hợp lệ!", "error")
         return redirect(url_for('home'))
+
+
+@app.route('/chapters/<int:chapter_id>/tests')
+def test_list(chapter_id):
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+    
+    tests = Test.query.filter(Test.chapter_id == chapter_id, Test.is_active == True).all()
+    return render_template("test_list.html", tests=tests, chapter_id=chapter_id)
+
+
+@app.route('/tests/<int:test_id>')
+def test_detail(test_id):
+    test = Test.query.get(test_id)
+    if not test or not test.is_active:
+        return redirect('/')
+
+    chapter = test.chapter
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    return render_template("test_detail.html", test=test)
+
+
+@app.route('/tests/<int:test_id>/take', methods=['GET', 'POST'])
+def take_test(test_id):
+    if not current_user.is_authenticated:
+        return redirect('/login')
+
+    test = Test.query.get(test_id)
+    if not test or not test.is_active:
+        return redirect('/')
+
+    latest_result = (
+        UserTest.query
+        .filter_by(user_id=current_user.id, test_id=test.id)
+        .order_by(UserTest.id.desc())
+        .first()
+    )
+
+    if request.method == 'POST':
+        questions = test.questions
+        total_questions = len(questions)
+        correct_count = 0
+
+        for q in questions:
+            selected_choice_id = request.form.get(f'question_{q.id}')
+            if selected_choice_id:
+                choice = Choice.query.get(int(selected_choice_id))
+                if choice and choice.is_true:
+                    correct_count += 1
+
+        max_score = test.total_score or 10.0
+        final_score = round((correct_count / total_questions) * max_score, 2) if total_questions > 0 else 0.0
+
+        user_test = UserTest(
+            user_id=current_user.id,
+            test_id=test.id,
+            score=final_score
+        )
+        db.session.add(user_test)
+
+        try:
+            db.session.commit()
+            return render_template(
+                'test_result.html',
+                test=test,
+                score=final_score,
+                max_score=max_score,
+                correct_count=correct_count,
+                total_questions=total_questions
+            )
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template('take_test.html', test=test, previous_result=latest_result, err_msg="Có lỗi xảy ra khi nộp bài thi!")
+
+    return render_template('take_test.html', test=test, previous_result=latest_result)
+
+
+@app.route("/chapters/<int:chapter_id>/tests/add", methods=["GET", "POST"])
+def add_test(chapter_id):
+    chapter = dao.get_chapter_by_id(chapter_id)
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    if request.method == "POST":
+        test_name = request.form.get("test_name")
+        description = request.form.get("description")
+        total_score = request.form.get("total_score", 10, type=float)
+
+        if not test_name:
+            return render_template("create_test.html", chapter_id=chapter_id, err_msg="Vui lòng nhập tên bài thi!")
+
+        try:
+            new_test = Test(
+                name=test_name,
+                description=description,
+                chapter_id=chapter_id,
+                total_score=total_score
+            )
+            db.session.add(new_test)
+            db.session.flush()
+            
+            question_contents = request.form.getlist("question_content[]")
+            
+            for index, content in enumerate(question_contents):
+                if content.strip():
+                    question = Question(test_id=new_test.id, content=content)
+                    db.session.add(question)
+                    db.session.flush()
+
+                    choices = request.form.getlist(f"choice_answer_{index}[]")
+                    correct_choice_idx = request.form.get(f"correct_choice_{index}")
+
+                    for c_idx, choice_text in enumerate(choices):
+                        if choice_text.strip():
+                            is_true = (str(c_idx) == correct_choice_idx)
+                            choice = Choice(
+                                question_id=question.id,
+                                answer=choice_text,
+                                is_true=is_true
+                            )
+                            db.session.add(choice)
+
+            db.session.commit()
+            return redirect(f"/chapters/{chapter_id}/tests")
+
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template("create_test.html", chapter_id=chapter_id, err_msg="Có lỗi xảy ra khi tạo bài thi!")
+
+    return render_template("create_test.html", chapter_id=chapter_id)
+
+
+@app.route('/tests/<int:test_id>/delete', methods=['POST'])
+def delete_test(test_id):
+    test = Test.query.get(test_id)
+    if not test:
+        return redirect('/')
+    
+    chapter = test.chapter
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    try:
+        test.is_active = False  # Xóa mềm
+        db.session.commit()
+    except Exception as ex:
+        db.session.rollback()
+        print(ex)
+
+    return redirect(f"/chapters/{chapter.id}/tests")
+
+
+@app.route('/tests/<int:test_id>/clone', methods=['GET', 'POST'])
+def clone_test(test_id):
+    source_test = Test.query.get(test_id)
+    if not source_test or not source_test.is_active:
+        return redirect('/')
+
+    chapter = source_test.chapter
+    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
+        return redirect("/")
+
+    if request.method == "POST":
+        test_name = request.form.get("test_name")
+        description = request.form.get("description")
+        total_score = request.form.get("total_score", 10, type=float)
+
+        if not test_name:
+            return render_template("create_test.html", chapter_id=chapter.id, source_test=source_test, err_msg="Vui lòng nhập tên bài thi!")
+
+        try:
+            new_test = Test(
+                name=test_name,
+                description=description,
+                chapter_id=chapter.id,
+                total_score=total_score
+            )
+            db.session.add(new_test)
+            db.session.flush()
+
+            question_contents = request.form.getlist("question_content[]")
+            for index, content in enumerate(question_contents):
+                if content.strip():
+                    question = Question(test_id=new_test.id, content=content)
+                    db.session.add(question)
+                    db.session.flush()
+
+                    choices = request.form.getlist(f"choice_answer_{index}[]")
+                    correct_choice_idx = request.form.get(f"correct_choice_{index}")
+
+                    for c_idx, choice_text in enumerate(choices):
+                        if choice_text.strip():
+                            is_true = (str(c_idx) == correct_choice_idx)
+                            choice = Choice(
+                                question_id=question.id,
+                                answer=choice_text,
+                                is_true=is_true
+                            )
+                            db.session.add(choice)
+
+            db.session.commit()
+            return redirect(f"/chapters/{chapter.id}/tests")
+
+        except Exception as ex:
+            db.session.rollback()
+            print(ex)
+            return render_template("create_test.html", chapter_id=chapter.id, source_test=source_test, err_msg="Có lỗi xảy ra khi tạo bản sao bài thi!")
+
+    return render_template("create_test.html", chapter_id=chapter.id, source_test=source_test)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

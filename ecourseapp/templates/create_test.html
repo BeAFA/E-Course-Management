@@ -1,0 +1,129 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/create_test.css">
+
+<div class="create-test-wrapper">
+    <!-- Header -->
+    <div class="test-header">
+        <h2>
+            <i class="fa-solid fa-file-signature"></i> 
+            {% if source_test %}Tạo Bài Thi Mới (Sao chép từ: {{ source_test.name }}){% else %}Tạo Bài Thi Mới{% endif %}
+        </h2>
+        <div class="test-header-sub">Thêm các câu hỏi trắc nghiệm và thiết lập đáp án cho chương học</div>
+    </div>
+
+    {% if err_msg %}
+        <div class="alert-error-box">{{ err_msg }}</div>
+    {% endif %}
+
+    <form method="POST" action="">
+        <!-- Thông tin chung -->
+        <div class="test-card">
+            <div class="block-title">
+                <span><i class="fa-solid fa-circle-info text-primary"></i> Thông tin chung</span>
+            </div>
+            <div class="form-group-custom">
+                <label class="form-label-custom">Tên bài thi (*)</label>
+                <input type="text" name="test_name" class="form-control-custom" 
+                       value="{% if source_test %}{{ source_test.name }} (Bản sao){% endif %}" 
+                       placeholder="Ví dụ: Bài kiểm tra kiến thức Chương 1" required>
+            </div>
+            <div class="form-row-2col">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Mô tả bài thi</label>
+                    <textarea name="description" class="form-control-custom" rows="2" placeholder="Nhập mô tả ngắn...">{% if source_test %}{{ source_test.description or '' }}{% endif %}</textarea>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Thang điểm</label>
+                    <input type="number" name="total_score" class="form-control-custom" 
+                           value="{% if source_test %}{{ source_test.total_score or 10 }}{% else %}10{% endif %}" step="0.5">
+                </div>
+            </div>
+        </div>
+
+        <!-- Danh sách câu hỏi -->
+        <div id="questions-container">
+            {% if source_test and source_test.questions %}
+                {% for q in source_test.questions %}
+                {% set q_idx = loop.index0 %}
+                <div class="test-card question-block" data-question-index="{{ q_idx }}">
+                    <div class="block-title">
+                        <span class="q-badge">Câu hỏi {{ q_idx + 1 }}</span>
+                        {% if not loop.first %}
+                        <button type="button" class="btn-del-q remove-question-btn">
+                            <i class="fa-solid fa-trash-can me-1"></i> Xóa câu hỏi
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Nội dung câu hỏi (*)</label>
+                        <input type="text" name="question_content[]" class="form-control-custom" value="{{ q.content }}" placeholder="Nhập nội dung câu hỏi..." required>
+                    </div>
+
+                    <label class="form-label-custom" style="margin-top: 14px;">Các lựa chọn đáp án:</label>
+                    <div class="choices-container">
+                        {% for c in q.choices %}
+                        <div class="choice-item-row">
+                            <label class="radio-btn-wrapper">
+                                <input type="radio" name="correct_choice_{{ q_idx }}" value="{{ loop.index0 }}" {% if c.is_true %}checked{% endif %}>
+                                <span>Đáp án Đúng</span>
+                            </label>
+                            <input type="text" name="choice_answer_{{ q_idx }}[]" class="form-control-custom" value="{{ c.answer }}" required>
+                            <button type="button" class="btn-delete-choice" title="Xóa đáp án"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn-add-choice-dashed">+ Thêm đáp án khác</button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="test-card question-block" data-question-index="0">
+                    <div class="block-title">
+                        <span class="q-badge">Câu hỏi 1</span>
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Nội dung câu hỏi (*)</label>
+                        <input type="text" name="question_content[]" class="form-control-custom" placeholder="Nhập nội dung câu hỏi..." required>
+                    </div>
+
+                    <label class="form-label-custom" style="margin-top: 14px;">Các lựa chọn đáp án:</label>
+                    <div class="choices-container">
+                        <div class="choice-item-row">
+                            <label class="radio-btn-wrapper">
+                                <input type="radio" name="correct_choice_0" value="0" checked>
+                                <span>Đáp án Đúng</span>
+                            </label>
+                            <input type="text" name="choice_answer_0[]" class="form-control-custom" placeholder="Đáp án A" required>
+                            <button type="button" class="btn-delete-choice" title="Xóa đáp án"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="choice-item-row">
+                            <label class="radio-btn-wrapper">
+                                <input type="radio" name="correct_choice_0" value="1">
+                                <span>Đáp án Đúng</span>
+                            </label>
+                            <input type="text" name="choice_answer_0[]" class="form-control-custom" placeholder="Đáp án B" required>
+                            <button type="button" class="btn-delete-choice" title="Xóa đáp án"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add-choice-dashed">+ Thêm đáp án khác</button>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar-flex">
+            <button type="button" id="add-question-btn" class="btn-main-action btn-add-q">
+                <i class="fa-solid fa-plus"></i> Thêm câu hỏi mới
+            </button>
+            <button type="submit" class="btn-main-action btn-save-test">
+                <i class="fa-solid fa-floppy-disk"></i> Lưu Bài Thi
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="/static/js/create_test.js"></script>
+{% endblock %}
