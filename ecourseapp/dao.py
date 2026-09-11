@@ -1,5 +1,5 @@
 from werkzeug.security import check_password_hash
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 from __init__ import db
 import models
@@ -16,7 +16,7 @@ def get_user_by_id(user_id):
     return models.User.query.get(user_id)
 
 
-def get_courses(kw=None, category_id=None):
+def get_courses(kw=None, category_id=None, rating_min=None, price_sort=None):
     query = db.session.query(
         models.Course,
         func.coalesce(func.avg(models.Rating.rating), 0).label('avg_rating'),
@@ -26,19 +26,34 @@ def get_courses(kw=None, category_id=None):
     ).filter(models.Course.is_active == True)
 
     if kw:
-        query = query.filter(models.Course.name.icontains(kw))
+        query = query.outerjoin(models.User, models.Course.teacher_id == models.User.id)
+        query = query.filter(or_(
+            models.Course.name.icontains(kw),
+            models.User.name.icontains(kw)
+        ))
+        
     if category_id:
         query = query.filter(models.Course.category_id == category_id)
 
     query = query.group_by(models.Course.id)
 
+    if rating_min:
+        query = query.having(func.coalesce(func.avg(models.Rating.rating), 0) >= float(rating_min))
+
+    if price_sort == 'asc':
+        query = query.order_by(models.Course.price.asc())
+    elif price_sort == 'desc':
+        query = query.order_by(models.Course.price.desc())
+    else:
+        query = query.order_by(models.Course.id.desc())
+
     results = query.all()
     courses = []
     for course, avg_rating, rating_count in results:
-        # Gắn tạm 2 thuộc tính không persist vào object Course
         course.avg_rating = round(float(avg_rating), 1)
         course.rating_count = rating_count
         courses.append(course)
+        
     return courses
 
 
@@ -217,6 +232,27 @@ def get_teacher_chat_rooms(course_id, teacher_id):
 
 def get_chat_messages(room_id):
     return models.ChatRoomMessage.query.filter_by(chat_room_id=room_id).order_by(models.ChatRoomMessage.id.asc()).all()
+
+def check_enrollment(user_id, course_id):
+    """Kiểm tra học viên đã đăng ký khóa học này chưa"""
+    return models.Enrollment.query.filter_by(user_id=user_id, course_id=course_id).first()
+
+def enroll_course(user_id, course_id):
+    enrollment = models.Enrollment(user_id=user_id, course_id=course_id)
+    db.session.add(enrollment)
+    db.session.commit()
+    return enrollment
+
+def save_payment_history(user_id, course_id, transaction_id, price):
+    payment = models.PaymentHistory(
+        user_id=user_id,
+        course_id=course_id,
+        transaction_id=transaction_id,
+        payment_method=models.PaymentMethod.VNPAY, 
+        price=price
+    )
+    db.session.add(payment)
+    db.session.commit()
 
 
 def get_admin_dashboard_stats():

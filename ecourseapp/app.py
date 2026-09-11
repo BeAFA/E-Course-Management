@@ -1,16 +1,18 @@
 import os
 import requests
-from flask_login import login_user, logout_user, current_user
+from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for
+from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for, flash
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, emit, join_room
+from datetime import datetime
 
-from __init__ import app, db, login
-from services.drive_service import upload_file, credentials
+from __init__ import app, db, login, VNPAY_CONFIG
+from services.drive_service import upload_file, credentials, delete_file
 from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag, ChatRoom, ChatRoomMessage
 import dao
+from vnpay import vnpay
 
 import admin
 
@@ -206,10 +208,28 @@ def update_password():
     return render_template("change_password.html", user=current_user)
 
 
+# @app.route('/courses')
+# def get_all_courses():
+#     courses = dao.get_courses()
+#     return render_template("chapter.html", courses=courses)
 @app.route('/courses')
 def get_all_courses():
-    courses = dao.get_courses()
-    return render_template("chapter.html", courses=courses)
+    # Bắt các tham số
+    kw = request.args.get('kw')
+    rating_min = request.args.get('rating')  
+    price_sort = request.args.get('price_sort')
+    category_id = request.args.get('category_id') 
+    categories = dao.get_categories()
+    
+    # Lấy danh sách khóa học theo bộ lọc
+    courses = dao.get_courses(
+        kw=kw, 
+        category_id=category_id, 
+        rating_min=rating_min, 
+        price_sort=price_sort
+    )
+    
+    return render_template("courses.html", courses=courses, categories=categories)
 
 
 @app.route('/courses/my_courses')
@@ -227,16 +247,26 @@ def get_my_course():
 def course_detail(course_id):
     course = dao.get_course_by_id(course_id)
     if not course:
-        return redirect('/')
+        flash("Không tìm thấy khóa học!", "error")
+        return redirect(url_for('get_all_courses'))
 
     stats = dao.get_course_rating_stats(course_id)
     ratings_page = dao.get_ratings_by_course(course_id, page=request.args.get('page', 1, type=int))
-    is_owner = dao.is_course_owner(current_user, course)
+    
+    is_owner = False
+    is_enrolled = False
+    
+    if current_user.is_authenticated:
+        is_owner = dao.is_course_owner(current_user, course)
+        
+        if dao.check_enrollment(current_user.id, course.id):
+            is_enrolled = True
 
     return render_template(
         'course_detail.html',
         course=course,
         is_owner=is_owner,
+        is_enrolled=is_enrolled,
         avg_rating=stats['avg_rating'],
         rating_count=stats['rating_count'],
         ratings=ratings_page.items,
@@ -479,13 +509,26 @@ def update_chapters(course_id, chapter_id):
 
 
 
-@app.route('/chapters/<int:chapter_id>/lessons')
+@app.route('/lessons/<int:chapter_id>')
+@login_required
 def lessons(chapter_id):
     chapter = dao.get_chapter_by_id(chapter_id)
-    if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
-        return redirect("/")
-    lesson_list = db.session.query(Lesson).filter(Lesson.chapter_id == chapter_id).all()
-    return render_template("lesson.html", lessons=lesson_list, chapter_id=chapter_id)
+    
+    if not chapter:
+        flash("Bài giảng không tồn tại hoặc đã bị xóa khỏi hệ thống!", "error")
+        return redirect(url_for('get_all_courses')) 
+        
+    course_id = chapter.course_id
+    
+    is_owner = dao.is_course_owner(current_user, chapter.course)
+    
+    is_enrolled = dao.check_enrollment(current_user.id, course_id)
+    
+    if not is_owner and not is_enrolled:
+        flash("Cảnh báo: Bạn cần đăng ký khóa học để xem nội dung bài giảng này!", "error")
+        return redirect(url_for('course_detail', course_id=course_id))
+
+    return render_template('lesson.html', chapter=chapter)
 
 
 @app.route("/chapters/<int:chapter_id>/lessons/add", methods=["GET", "POST"])
@@ -494,7 +537,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
     lesson = None
 
     if lesson_id:
-        # --- CHẾ ĐỘ SỬA ---
         lesson = dao.get_lesson_by_id(lesson_id)
         if lesson is None:
             return redirect("/")
@@ -749,7 +791,8 @@ def handle_send_message(data):
 def join_course_chat(course_id):
     course = dao.get_course_by_id(course_id)
     if not course:
-        abort(404)
+        flash("Khóa học không tồn tại!", "error")
+        return redirect(url_for('home'))
         
     if current_user.id == course.teacher_id:
         student_rooms = dao.get_teacher_chat_rooms(course.id, current_user.id)
@@ -772,10 +815,12 @@ def join_course_chat(course_id):
 def open_chat_room(room_id):
     room = dao.get_chat_room_by_id(room_id)
     if not room:
-        abort(404)
+        flash("Phòng trò chuyện không tồn tại hoặc đã bị xóa!", "error")
+        return redirect(url_for('home'))
     
     if current_user.id not in [room.student_id, room.teacher_id]:
-        abort(403)
+        flash("Cảnh báo: Bạn không có quyền truy cập vào phòng trò chuyện của người khác!", "error")
+        return redirect(url_for('course_detail', course_id=room.course_id))
         
     messages = dao.get_chat_messages(room.id)
     
@@ -790,6 +835,77 @@ def open_chat_room(room_id):
         messages=messages,
         student_rooms=student_rooms
     )
+
+@app.route('/checkout/<int:course_id>')
+@login_required 
+def checkout(course_id):
+    course = dao.get_course_by_id(course_id)
+    
+    if not course:
+        flash("Không tìm thấy thông tin khóa học để thanh toán!", "error")
+        return redirect(url_for('get_all_courses'))
+        
+    if dao.check_enrollment(current_user.id, course.id):
+        flash("Bạn đã đăng ký khóa học này rồi!", "info")
+        return redirect(url_for('course_detail', course_id=course.id))
+        
+    return render_template('checkout.html', course=course)
+
+# --- 2. XỬ LÝ CHUYỂN HƯỚNG SANG VNPAY ---
+@app.route('/checkout/<int:course_id>/process', methods=['POST'])
+@login_required
+def process_checkout(course_id):
+    course = dao.get_course_by_id(course_id)
+    
+    if not course.price or course.price <= 0:
+        dao.enroll_course(current_user.id, course.id)
+        flash("Đăng ký khóa học miễn phí thành công!", "success")
+        return redirect(url_for('course_detail', course_id=course.id))
+        
+    vnp = vnpay()
+    vnp.requestData['vnp_Version'] = '2.1.0'
+    vnp.requestData['vnp_Command'] = 'pay'
+    vnp.requestData['vnp_TmnCode'] = VNPAY_CONFIG['vnp_TmnCode']
+    vnp.requestData['vnp_Amount'] = int(course.price) * 100 # VNPAY bắt buộc nhân 100
+    vnp.requestData['vnp_CurrCode'] = 'VND'
+    
+    txn_ref = f"{current_user.id}-{course.id}-{int(datetime.now().timestamp())}"
+    vnp.requestData['vnp_TxnRef'] = txn_ref
+    vnp.requestData['vnp_OrderInfo'] = f"Thanh toan khoa hoc {course.name}"
+    vnp.requestData['vnp_OrderType'] = 'billpayment'
+    vnp.requestData['vnp_Locale'] = 'vn'
+    vnp.requestData['vnp_CreateDate'] = datetime.now().strftime('%Y%m%d%H%M%S')
+    vnp.requestData['vnp_IpAddr'] = request.remote_addr
+    vnp.requestData['vnp_ReturnUrl'] = VNPAY_CONFIG['vnp_ReturnUrl']
+
+    vnpay_payment_url = vnp.get_payment_url(VNPAY_CONFIG['vnp_Url'], VNPAY_CONFIG['vnp_HashSecret'])
+    return redirect(vnpay_payment_url)
+
+# --- NHẬN KẾT QUẢ TỪ VNPAY ---
+@app.route('/payment/vnpay_return')
+def vnpay_return():
+    vnp = vnpay()
+    vnp.responseData = request.args.to_dict()
+    
+    if vnp.validate_response(VNPAY_CONFIG['vnp_HashSecret']):
+        # Mã '00' nghĩa là giao dịch thành công
+        if vnp.responseData['vnp_ResponseCode'] == '00': 
+            txn_ref = vnp.responseData['vnp_TxnRef']
+            user_id, course_id, _ = txn_ref.split('-')
+            amount = int(vnp.responseData['vnp_Amount']) / 100
+            
+            if not dao.check_enrollment(user_id, course_id):
+                dao.save_payment_history(user_id, course_id, txn_ref, amount)
+                dao.enroll_course(user_id, course_id)
+            
+            flash("Thanh toán thành công! Chào mừng bạn đến với khóa học.", "success")
+            return redirect(url_for('course_detail', course_id=course_id))
+        else:
+            flash("Thanh toán bị hủy hoặc không thành công!", "error")
+            return redirect(url_for('home'))
+    else:
+        flash("Lỗi bảo mật: Dữ liệu thanh toán không hợp lệ!", "error")
+        return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(debug=True)

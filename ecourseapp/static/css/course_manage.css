@@ -211,3 +211,89 @@
         cursor: pointer;
         accent-color: #4e54c8;
     }
+
+    /* Box hiển thị giá tiền trên Banner */
+.price-box {
+    background-color: #ffffff;
+    border: 2px solid #005baa; /* Màu VNPAY */
+    border-radius: 10px;
+    padding: 0.65rem 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #334155;
+    box-shadow: var(--shadow-sm);
+}
+
+.price-text {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #005baa;
+}
+
+/* Nút Đăng ký màu nổi bật */
+.btn-enroll-now {
+    padding: 0.75rem 1.5rem;
+    background-color: #005baa;
+    border: 1.5px solid #005baa;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+}
+
+.btn-enroll-now:hover {
+    background-color: #004685;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* Khung thông báo khóa nội dung */
+.locked-course-notice {
+    background-color: #f1f5f9;
+    border: 1px dashed #64748b;
+    border-radius: 8px;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1.5rem;
+}
+
+.locked-text h3 {
+    margin: 0 0 0.5rem 0;
+    color: #1e293b;
+    font-size: 1.2rem;
+}
+
+.locked-text p {
+    margin: 0;
+    color: #475569;
+}
+
+/* Trạng thái link bị khóa */
+.lesson-link.locked {
+    color: #94a3b8;
+    text-decoration: none;
+    cursor: not-allowed;
+}
+.lesson-link.locked:hover {
+    color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+    .locked-course-notice {
+        flex-direction: column;
+        text-align: center;
+    }
+}

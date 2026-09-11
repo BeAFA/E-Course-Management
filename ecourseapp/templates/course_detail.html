@@ -6,14 +6,29 @@
 {% block content %}
 <section class="course-banner">
     <h1 class="course-title">{{ course.name | default('Tên khóa học') }}</h1>
+
+    {% if is_enrolled or is_owner %}
     <div class="progress-box">
         <span>Tiến độ hoàn thành:</span>
         <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;">
+            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('0') }}%;">
             </div>
         </div>
-        <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
+        <span class="progress-text" id="courseProgressText">{{ progress | default('0') }}%</span>
     </div>
+    {% else %}
+    <!-- HIỂN THỊ GIÁ TIỀN CHO NGƯỜI CHƯA ĐĂNG KÝ -->
+    <div class="price-box">
+        <span>Giá khóa học:</span>
+        <span class="price-text">
+            {% if course.price and course.price > 0 %}
+            {{ "{:,.0f}".format(course.price).replace(',', '.') }} ₫
+            {% else %}
+            Miễn phí
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
 </section>
 {% if err_msg %}
 <div class="alert alert-danger">{{ err_msg }}</div>
@@ -29,21 +44,42 @@
         <div class="intro-right">
             {% if current_user.is_authenticated %}
             {% if is_owner %}
-            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher"
-                style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher">
                 <i class="fa-regular fa-comments"></i> Hỏi đáp với học viên
             </a>
-            {% else %}
-            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher"
-                style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            {% elif is_enrolled %}
+            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher">
                 <i class="fa-regular fa-comment-dots"></i> Vào phòng chat với giảng viên
             </a>
+            {% else %}
+            <!-- NÚT CHUYỂN SANG TRANG CHECKOUT -->
+            <a href="{{ url_for('checkout', course_id=course.id) }}" class="btn-enroll-now">
+                <i class="fa-solid fa-cart-shopping"></i> Đăng ký học ngay
+            </a>
             {% endif %}
+            {% else %}
+            <a href="{{ url_for('login_my_user') }}" class="btn-ask-teacher" title="Bạn cần đăng nhập để trò chuyện">
+                <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập để đăng ký
+            </a>
             {% endif %}
         </div>
     </section>
 
     <div class="course-modules" id="courseModules">
+        {% if not is_enrolled and not is_owner %}
+        <div class="locked-course-notice">
+            <i class="fa-solid fa-lock" style="font-size: 2rem; color: #475569;"></i>
+            <div class="locked-text">
+                <h3>Nội dung khóa học đã bị khóa</h3>
+                <p>Vui lòng đăng ký để có thể xem chi tiết bài giảng và tham gia làm bài kiểm tra.</p>
+            </div>
+            <a href="{{ url_for('checkout', course_id=course.id) }}" class="btn-enroll-now" style="margin: 0;">
+                Đăng ký ngay
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- KHỐI 1: BÀI GIẢNG -->
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
@@ -61,10 +97,18 @@
                 {% for chapter in course.chapters %}
                 <div class="lesson-item">
                     <div style="display: flex;">
+                        <!-- ĐÃ GỘP IF/ELSE ĐỂ CHỈ HIỂN THỊ 1 DÒNG DUY NHẤT -->
+                        {% if is_enrolled or is_owner %}
                         <a href="{{url_for('lessons', chapter_id=chapter.id)}}" class="lesson-link"
                             style="margin-right:5px;" data-type="doc" data-title="{{ chapter.name }}">
                             {{ loop.index }}.{{ chapter.name }}
                         </a>
+                        {% else %}
+                        <span class="lesson-link locked" style="margin-right:5px;">
+                            {{ loop.index }}.{{ chapter.name }} <i class="fa-solid fa-lock" style="font-size: 0.8rem; margin-left: 5px;"></i>
+                        </span>
+                        {% endif %}
+
                         {% if is_owner %}
                         <a href="{{url_for('update_chapters', course_id=course.id, chapter_id=chapter.id)}}"
                             class="edit-btn" title="Chỉnh sửa">
@@ -89,6 +133,7 @@
             </div>
         </div>
 
+        <!-- KHỐI 2: BÀI KIỂM TRA -->
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
@@ -106,16 +151,23 @@
                 {% if has_test %}
                 {% for chapter in has_test %}
                 <div class="lesson-item">
-                    <a class="lesson-link" data-type="doc" data-title="{{ chapter.test }}">
-                        {{ loop.index }}.{{ chapter.name }}: {{ chapter.test }}
+                    <!-- SỬA LẠI THÀNH IF/ELSE CHUẨN VÀ THÊM ".name" ĐỂ KHÔNG IN RA OBJECT -->
+                    {% if is_enrolled or is_owner %}
+                    <a href="{{url_for('lessons', chapter_id=chapter.id)}}" class="lesson-link" style="margin-right:5px;" data-type="doc" data-title="{{ chapter.test.name }}">
+                        {{ loop.index }}.{{ chapter.name }}: {{ chapter.test.name }}
                     </a>
+                    {% else %}
+                    <span class="lesson-link locked" style="margin-right:5px;">
+                        {{ loop.index }}.{{ chapter.name }}: {{ chapter.test.name }} <i class="fa-solid fa-lock" style="font-size: 0.8rem; margin-left: 5px;"></i>
+                    </span>
+                    {% endif %}
 
                     {% if chapter.test.description %}
                     <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
                         {{ chapter.test.description }}
                     </span>
                     {% else %}
-                    <span class="status-badge video">Bài học</span>
+                    <span class="status-badge video">Bài kiểm tra</span>
                     {% endif %}
                 </div>
                 {% endfor %}
