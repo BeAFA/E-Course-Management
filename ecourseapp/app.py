@@ -1,17 +1,21 @@
+import json
 import os
+from datetime import datetime
+
 import requests
 from flask_login import login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from werkzeug.utils import secure_filename
+from google.genai import types
 
-from __init__ import app, db, login
+from __init__ import app, db, login, client, GEMINI_MODEL, SYSTEM_INSTRUCTION
+from ai_chat_routes import RESPONSE_SCHEMA, _build_courses_context, MAX_TURNS_SENT, _serialize_message
 from services.drive_service import upload_file, credentials, delete_file
-from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag
+from models import User, UserRole, Level, Lesson, Chapter, Course, CourseRecommendation, SenderType, \
+    AIChatRoomMessage, AIChatRoom
 import dao
-
-import admin
 
 TEMP_UPLOAD_DIR = "temp"
 
@@ -79,6 +83,8 @@ def register_new_user():
         confirm = request.form.get("confirm")
         role = request.form.get("role")
 
+
+
         # 1. KIỂM TRA DỮ LIỆU ĐẦU VÀO
         if password != confirm:
             return render_template("register.html", err_msg="Xác nhận mật khẩu không khớp!")
@@ -108,11 +114,12 @@ def register_new_user():
             if uploaded_id is None:
                 return render_template("register.html", err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại.")
 
-            # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
             img_drive_id = uploaded_id
             img_url = uploaded_url
 
-        # 3. LƯU DATABASE
+        if role is None:
+            role = "STUDENT"
+
         try:
             hashed_password = generate_password_hash(password)
             user = User(
@@ -120,8 +127,8 @@ def register_new_user():
                 email=email,
                 password=hashed_password,
                 role=UserRole(role),
-                img_drive_id=img_drive_id,  # Sẽ lưu ID mặc định hoặc ID vừa upload
-                img_url=img_url  # Sẽ lưu URL mặc định hoặc URL vừa upload
+                img_drive_id=img_drive_id,
+                img_url=img_url
             )
             db.session.add(user)
             db.session.commit()
@@ -333,7 +340,7 @@ def update_course(course_id):
         return render_template("home.html", err_msg=err_msg)
 
     if course is None:
-        err_msg="Khóa học không tồn tại"
+        err_msg = "Khóa học không tồn tại"
         return render_template("my_course.html", err_msg=err_msg)
 
     categories = dao.get_categories()
@@ -360,7 +367,7 @@ def update_course(course_id):
             os.remove(filepath)
 
             if uploaded_id is None:
-                err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại."
+                err_msg = "Tải ảnh lên hệ thống thất bại, vui lòng thử lại."
                 return render_template("create_course.html", course=course, categories=categories, err_msg=err_msg)
 
             # Ghi đè lại ảnh mặc định bằng ảnh người dùng vừa upload thành công
@@ -371,7 +378,7 @@ def update_course(course_id):
             err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
             return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
         try:
-            dao.update_course(course,name,price,category_id,description,img_drive_id,img_url, tag_ids=None)
+            dao.update_course(course, name, price, category_id, description, img_drive_id, img_url, tag_ids=None)
             db.session.commit()
             return redirect(f'/courses/{course.id}')
         except Exception as ex:
@@ -381,6 +388,7 @@ def update_course(course_id):
             return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
 
     return render_template('create_course.html', course=course, categories=categories, err_msg=err_msg)
+
 
 @app.route('/courses/bulk-update-status', methods=['POST'])
 def bulk_update_course_status():
@@ -437,6 +445,7 @@ def add_chapters(course_id):
     chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
     return render_template("create_chapter.html", chapters=chapter_list, course_id=course_id)
 
+
 @app.route('/courses/<int:course_id>/chapters/<int:chapter_id>/update', methods=["GET", "POST"])
 def update_chapters(course_id, chapter_id):
     if not current_user.is_authenticated:
@@ -446,12 +455,12 @@ def update_chapters(course_id, chapter_id):
     is_owner = dao.is_course_owner(current_user, course)
     if not dao.is_course_owner(current_user, course):
         return render_template("course_detail.html", course=course, is_owner=is_owner,
-                                err_msg="Bạn không có quyền chỉnh sửa khóa học này")
+                               err_msg="Bạn không có quyền chỉnh sửa khóa học này")
 
     chapter = dao.get_chapter_by_id(chapter_id)
     if chapter is None or chapter.course_id != course_id:
         return render_template("course_detail.html", course=course,
-                                is_owner=is_owner, err_msg="Chương này không tồn tại")
+                               is_owner=is_owner, err_msg="Chương này không tồn tại")
 
     if request.method == "POST":
         name = request.form.get("name")
@@ -474,8 +483,7 @@ def update_chapters(course_id, chapter_id):
 
     chapter_list = db.session.query(Chapter).filter(Chapter.course_id == course_id).all()
     return render_template("create_chapter.html", chapter=chapter,
-                            chapters=chapter_list, course_id=course_id)
-
+                           chapters=chapter_list, course_id=course_id)
 
 
 @app.route('/chapters/<int:chapter_id>/lessons')
@@ -672,12 +680,14 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
         chapter_id=chapter_id, lesson_id=lesson_id, lesson=lesson
     )
 
+
 @app.route("/lessons/<int:lesson_id>", methods=["GET", "POST"])
 def lesson_detail(lesson_id):
     lesson = dao.get_lesson_by_id(lesson_id)
     if not current_user.is_authenticated or not dao.is_lesson_owner(current_user, lesson):
         return redirect("/")
     return render_template("lesson_detail.html", lesson=lesson)
+
 
 @app.route("/media/video/<file_id>")
 def stream_video(file_id):
@@ -707,9 +717,204 @@ def stream_video(file_id):
         resp.headers["Content-Length"] = r.headers["Content-Length"]
 
     resp.headers["Accept-Ranges"] = "bytes"
-    resp.headers["Content-Disposition"] = "inline"  # ép phát trực tiếp, không tải file
+    resp.headers["Content-Disposition"] = "inline"
 
     return resp
+
+
+@app.route("/ai_chat")
+@app.route("/ai_chat/new")
+def ai_chat_page():
+    if not current_user.is_authenticated:
+        return redirect("/login")
+    return render_template("ai_chat.html")
+
+
+# ---------------- Danh sách / tạo / xoá đoạn chat ----------------
+
+@app.route("/ai_chat/rooms", methods=["GET"])
+def list_ai_chat_rooms():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    rooms = (
+        AIChatRoom.query.filter_by(user_id=current_user.id)
+        .order_by(AIChatRoom.updated_date.desc())
+        .all()
+    )
+    return jsonify(
+        [
+            {
+                "id": r.id,
+                "title": r.title,
+                "updated_date": r.updated_date.isoformat() if r.updated_date else None,
+            }
+            for r in rooms
+        ]
+    )
+
+
+@app.route("/ai_chat/rooms", methods=["POST"])
+def create_ai_chat_room():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom(user_id=current_user.id, title="Cuộc trò chuyện mới")
+    db.session.add(room)
+    db.session.commit()
+    return jsonify({"id": room.id, "title": room.title})
+
+
+@app.route("/ai_chat/rooms/<int:room_id>", methods=["DELETE"])
+def delete_ai_chat_room(room_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom.query.get(room_id)
+    if not room or room.user_id != current_user.id:
+        return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
+
+    db.session.delete(room)  # cascade="all, delete-orphan" sẽ tự xoá messages liên quan
+    db.session.commit()
+    return jsonify({"status": "ok"})
+
+
+# ---------------- Tin nhắn trong 1 đoạn chat ----------------
+
+@app.route("/ai_chat/rooms/<int:room_id>/messages", methods=["GET"])
+def get_ai_chat_messages(room_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom.query.get(room_id)
+    if not room or room.user_id != current_user.id:
+        return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
+
+    messages = (
+        AIChatRoomMessage.query.filter_by(ai_chat_room_id=room_id)
+        .order_by(AIChatRoomMessage.id.asc())
+        .all()
+    )
+    return jsonify(
+        {
+            "title": room.title,
+            "messages": [_serialize_message(m) for m in messages],
+        }
+    )
+
+
+@app.route("/ai_chat/rooms/<int:room_id>/messages", methods=["POST"])
+def send_ai_chat_message(room_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom.query.get(room_id)
+    if not room or room.user_id != current_user.id:
+        return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
+
+    data = request.get_json(force=True)
+    user_message = (data or {}).get("message", "").strip()
+    if not user_message:
+        return jsonify({"error": "Tin nhắn rỗng"}), 400
+
+    # 1) LƯU tin nhắn user vào DB trước
+    user_msg = AIChatRoomMessage(
+        ai_chat_room_id=room_id,
+        user_id=current_user.id,
+        sender_type=SenderType.USER,
+        content=user_message,
+    )
+    db.session.add(user_msg)
+    db.session.commit()
+
+    # 2) LOAD lại lịch sử của đoạn chat này từ DB (chính là bước "load tất cả đoạn chat cũ")
+    history_rows = (
+        AIChatRoomMessage.query.filter_by(ai_chat_room_id=room_id)
+        .order_by(AIChatRoomMessage.id.asc())
+        .all()
+    )
+    history_rows = history_rows[-MAX_TURNS_SENT:]  # cắt bớt nếu chat quá dài
+
+    contents = [
+        {
+            "role": "user" if m.sender_type == SenderType.USER else "model",
+            "parts": [{"text": m.content}],
+        }
+        for m in history_rows
+    ]
+
+    system_instruction = (
+            SYSTEM_INSTRUCTION
+            + "\n\nDanh sách khóa học hiện có (chỉ được điền course_ids nằm trong danh sách này):\n"
+            + _build_courses_context()
+            + "\n\nLuôn trả lời đúng theo JSON schema được cung cấp."
+    )
+
+    # 3) GỬI toàn bộ lịch sử đã load cho Gemini, bắt trả về JSON có cấu trúc
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.7,
+                response_mime_type="application/json",
+                response_schema=RESPONSE_SCHEMA,
+            ),
+        )
+        result = json.loads(response.text)
+        reply_text = (result.get("reply") or "").strip() or "Xin lỗi, mình chưa có câu trả lời phù hợp."
+        course_ids = result.get("course_ids") or []
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Lỗi khi gọi Gemini API: {e}"}), 500
+
+    # 4) LƯU câu trả lời AI + các khóa học được gợi ý (nếu có)
+    ai_msg = AIChatRoomMessage(
+        ai_chat_room_id=room_id,
+        user_id=None,
+        sender_type=SenderType.AI,
+        content=reply_text,
+    )
+    db.session.add(ai_msg)
+    db.session.flush()  # cần ai_msg.id trước khi tạo CourseRecommendation
+
+    valid_courses = (
+        Course.query.filter(Course.id.in_(course_ids)).all() if course_ids else []
+    )
+    for c in valid_courses:
+        db.session.add(
+            CourseRecommendation(
+                user_id=current_user.id,
+                course_id=c.id,
+                ai_chat_room_message_id=ai_msg.id,
+            )
+        )
+
+    # Tự đặt tiêu đề đoạn chat theo tin nhắn đầu tiên
+    if room.title == "Cuộc trò chuyện mới":
+        room.title = user_message[:40] + ("..." if len(user_message) > 40 else "")
+
+    # Đưa đoạn chat vừa nhắn lên đầu danh sách (cập nhật thời gian hoạt động gần nhất)
+    room.updated_date = datetime.utcnow()
+
+    db.session.commit()
+
+    return jsonify(
+        {
+            "reply": reply_text,
+            "courses": [
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "category": c.category.name if c.category else "",
+                    "price": c.price or 0,
+                    "icon": "📘",
+                }
+                for c in valid_courses
+            ],
+        }
+    )
 
 
 if __name__ == '__main__':

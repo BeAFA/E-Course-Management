@@ -18,6 +18,11 @@ class Level(enum.Enum):
     EXPERT = "EXPERT"
 
 
+class SenderType(enum.Enum):
+    USER = "USER"
+    AI = "AI"
+
+
 class PaymentMethod(enum.Enum):
     MOMO = "MOMO"
     VNPAY = "VNPAY"
@@ -45,7 +50,6 @@ class User(Base, UserMixin):
     major = db.Column(db.String(80), nullable=True)
     role = db.Column(db.Enum(UserRole), default=UserRole.STUDENT, nullable=False)
 
-    # Phía "một" của các quan hệ một-nhiều, thay cho backref
     courses = db.relationship("Course", back_populates="teacher")
     user_tests = db.relationship("UserTest", back_populates="user")
     student_chats = db.relationship(
@@ -57,10 +61,14 @@ class User(Base, UserMixin):
     messages = db.relationship(
         "ChatRoomMessage", foreign_keys="ChatRoomMessage.sender_id", back_populates="sender"
     )
+    ai_chat_room_messages = db.relationship("AIChatRoomMessage", foreign_keys="AIChatRoomMessage.user_id",
+                                            back_populates="user")
+    user_chats = db.relationship("AIChatRoom", foreign_keys="AIChatRoom.user_id", back_populates="user")
+    course_recommendations = db.relationship("CourseRecommendation", back_populates="user")
     enrollments = db.relationship("Enrollment", back_populates="user")
     payments = db.relationship("PaymentHistory", back_populates="user")
     ratings = db.relationship("Rating", back_populates="user")
-    
+
     def __str__(self):
         return self.name
 
@@ -71,7 +79,7 @@ class Category(Base):
     name = db.Column(db.String(80), nullable=False, unique=True)
 
     courses = db.relationship("Course", back_populates="category")
-    
+
     def __str__(self):
         return self.name
 
@@ -83,7 +91,7 @@ class Tag(Base):
     name = db.Column(db.String(80), nullable=False, unique=True)
 
     courses_tags = db.relationship("CourseTag", back_populates="tag")
-    
+
     def __str__(self):
         return self.name
 
@@ -103,7 +111,6 @@ class Course(Base):
     teacher = db.relationship('User', back_populates='courses')
     category = db.relationship('Category', back_populates='courses')
 
-    # Phía "một" của các quan hệ mà Course là cha
     course_tags = db.relationship("CourseTag", back_populates="course")
     chapters = db.relationship(
         "Chapter",
@@ -112,12 +119,24 @@ class Course(Base):
         passive_deletes=True,
     )
     chats = db.relationship("ChatRoom", back_populates="course")
+    recommendations = db.relationship("CourseRecommendation", back_populates="course")
     enrollments = db.relationship("Enrollment", back_populates="course")
     payments = db.relationship("PaymentHistory", back_populates="course")
     ratings = db.relationship("Rating", back_populates="course")
-    
+
     def __str__(self):
         return self.name
+
+    def to_ai_context(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "category": self.category.name,
+            "tags": [ct.tag.name for ct in self.course_tags],
+            "price": self.price,
+            "desc": (self.description or "")[:100]
+        }
+
 
 # ================= Rating =================
 class Rating(Base):
@@ -127,7 +146,6 @@ class Rating(Base):
     user_id = db.Column(db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     rating = db.Column(db.SmallInteger, nullable=False, default=5)
     comment = db.Column(db.Text, nullable=True)
-
 
     course = db.relationship("Course", back_populates="ratings")
     user = db.relationship("User", back_populates="ratings")
@@ -179,7 +197,7 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    
+
     def __str__(self):
         return self.name
 
@@ -203,6 +221,7 @@ class Lesson(Base):
     def __str__(self):
         return self.name
 
+
 # ================= Test =================
 class Test(Base):
     __tablename__ = "test"
@@ -225,6 +244,7 @@ class Test(Base):
     def __str__(self):
         return self.name
 
+
 # ================= Question =================
 class Question(Base):
     __tablename__ = "question"
@@ -244,6 +264,7 @@ class Question(Base):
     def __str__(self):
         return self.content[0:15] + "..."
 
+
 # ================= Choice =================
 class Choice(Base):
     __tablename__ = "choice"
@@ -253,7 +274,7 @@ class Choice(Base):
     is_true = db.Column(db.Boolean, default=False, nullable=False)
 
     question = db.relationship("Question", back_populates="choices")
-    
+
     def __str__(self):
         return self.answer[:15] + "..."
 
@@ -288,9 +309,9 @@ class ChatRoom(Base):
 
     def __str__(self):
         return self.student.name + "_" + self.teacher.name
-    
 
-# ================= ChatMessage =================
+
+# ================= ChatRoomMessage =================
 class ChatRoomMessage(Base):
     __tablename__ = "chat_room_message"
 
@@ -301,6 +322,56 @@ class ChatRoomMessage(Base):
     sender = db.relationship("User", foreign_keys=[sender_id], back_populates="messages")
     chat_room = db.relationship("ChatRoom", back_populates="messages")
 
+
+# ================= AI Chat Room=================
+class AIChatRoom(Base):
+    __tablename__ = "ai_chat_room"
+
+    user_id = db.Column(db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+
+    ai_chat_messages = db.relationship("AIChatRoomMessage", back_populates="ai_chat_room", cascade="all, delete-orphan",
+                                       passive_deletes=True, )
+    user = db.relationship("User", back_populates="user_chats")
+
+    def __str__(self):
+        return self.user.name
+
+
+# ================= AI Message =================
+class AIChatRoomMessage(Base):
+    __tablename__ = "ai_chat_room_message"
+
+    ai_chat_room_id = db.Column(db.ForeignKey('ai_chat_room.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.ForeignKey('user.id', ondelete='CASCADE'), nullable=True)
+    sender_type = db.Column(db.Enum(SenderType), nullable=False, default=SenderType.USER)
+    content = db.Column(db.Text, nullable=False)
+
+    user = db.relationship("User", foreign_keys=[user_id], back_populates="ai_chat_room_messages")
+    ai_chat_room = db.relationship("AIChatRoom", back_populates="ai_chat_messages")
+    recommendations = db.relationship(
+        "CourseRecommendation",
+        back_populates="ai_chat_room_message",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+# ================= Course Recommendation =================
+class CourseRecommendation(Base):
+    __tablename__ = "course_recommendation"
+
+    user_id = db.Column(db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    course_id = db.Column(db.ForeignKey('course.id', ondelete='CASCADE'), nullable=False)
+    ai_chat_room_message_id = db.Column(
+        db.ForeignKey('ai_chat_room_message.id', ondelete='CASCADE'), nullable=False
+    )
+
+    user = db.relationship("User", back_populates="course_recommendations")
+    course = db.relationship("Course", back_populates="recommendations")
+    ai_chat_room_message = db.relationship("AIChatRoomMessage", back_populates="recommendations")
+
+    __table_args__ = (db.UniqueConstraint("ai_chat_room_message_id", "course_id"),)
 
 
 # ================= Registered Class =================
@@ -331,7 +402,7 @@ class PaymentHistory(Base):
     user = db.relationship("User", back_populates="payments")
     course = db.relationship("Course", back_populates="payments")
 
-    
+
 # ================= Commission =================
 class Commission(Base):
     __tablename__ = "commission"
@@ -348,7 +419,7 @@ class Commission(Base):
             commission.total_amount += amount
         db.session.commit()
         return commission.total_amount
-    
+
 # cd vào thư mục ecourseapp rồi chạy python seed_data.py trong Command Prompt để tạo bảng và tạo dữ liệu mẫu
 
 # if __name__ == "__main__":

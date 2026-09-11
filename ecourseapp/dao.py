@@ -1,3 +1,6 @@
+import json
+
+import requests
 from werkzeug.security import check_password_hash
 from sqlalchemy import func
 from datetime import datetime, timedelta
@@ -167,7 +170,7 @@ def get_lesson_by_id(lesson_id):
 
 
 def is_course_owner(user, course):
-    if not user or not course:
+    if not user or user.is_anonymous or not course:
         return False
     return user.role == models.UserRole.TEACHER and course.teacher_id == user.id
 
@@ -188,6 +191,55 @@ def is_lesson_owner(user, lesson):
         return False
     return is_chapter_owner(user, lesson.chapter)
 
+def get_course_recommendation(user_message: str, chat_history: list):
+    # 1. Lấy danh sách course cần đưa cho AI (nên lọc trước nếu DB lớn)
+    courses = models.Course.query.filter_by(is_active=True).all()
+
+    # 2. Duyệt qua từng course, build context tối giản
+    course_contexts = [models.Course.to_ai_context(c) for c in courses]
+
+    # 3. Gọi API, đưa course_contexts vào system prompt dạng JSON string
+    system_prompt = f"""Bạn là trợ lý gợi ý khóa học.
+Dưới đây là danh sách khóa học hiện có (dạng JSON):
+{json.dumps(course_contexts, ensure_ascii=False)}
+
+Dựa vào nhu cầu của user, hãy chọn ra các khóa học phù hợp nhất.
+CHỈ trả lời bằng JSON theo format sau, không thêm text nào khác:
+{{"reply": "câu trả lời tự nhiên cho user", "recommended_course_ids": [id1, id2]}}
+Nếu không có khóa học nào phù hợp, trả recommended_course_ids là mảng rỗng []."""
+
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={"Content-Type": "application/json"},
+        json={
+            "model": "claude-sonnet-4-6",
+            "max_tokens": 1000,
+            "system": system_prompt,
+            "messages": chat_history + [{"role": "user", "content": user_message}]
+        }
+    )
+
+    data = response.json()
+    raw_text = data["content"][0]["text"]
+
+    # 4. Parse JSON trả về (nhớ strip markdown fence nếu có)
+    clean = raw_text.replace("```json", "").replace("```", "").strip()
+    try:
+        result = json.loads(clean)
+    except json.JSONDecodeError:
+        result = {"reply": raw_text, "recommended_course_ids": []}
+
+    # 5. Query lại Course thật từ id AI trả về (không tin dữ liệu AI tự mô tả)
+    recommended_ids = result.get("recommended_course_ids", [])
+    recommended_courses = models.Course.query.filter(models.Course.id.in_(recommended_ids)).all()
+
+    return {
+        "reply": result.get("reply", ""),
+        "courses": [
+            {"id": c.id, "name": c.name, "price": c.price, "img_url": c.img_url}
+            for c in recommended_courses
+        ]
+    }
 
 def get_admin_dashboard_stats():
     commission_record = models.Commission.query.first()
