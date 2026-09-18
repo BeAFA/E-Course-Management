@@ -450,3 +450,54 @@ body {
         right: 1rem;
     }
 }
+
+/* Star Rating Picker (đảo chiều để hover mượt từ 1 đến 5 sao) */
+.star-rating-box {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 6px;
+}
+
+.star-rating-box input[type="radio"] {
+    display: none;
+}
+
+.star-rating-box label {
+    font-size: 28px;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.star-rating-box input[type="radio"]:checked ~ label,
+.star-rating-box label:hover,
+.star-rating-box label:hover ~ label {
+    color: #f59e0b;
+}
+
+.star-rating-box label:hover {
+    transform: scale(1.15);
+}
+
+/* Avatar ký tự & Review Item */
+.review-item {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 16px 0;
+}
+
+.review-item:last-child {
+    border-bottom: none;
+}
+
+.review-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #e0e7ff;
+    color: #3730a3;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}

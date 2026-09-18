@@ -1,0 +1,166 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/teacher_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Tiêu đề trang -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie text-primary me-2"></i>Bảng Thống Kê Giảng Viên</h2>
+            <div class="text-muted small">Theo dõi số lượng học viên, tình hình doanh thu và các khóa học của bạn</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('get_my_course') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-list me-1"></i> Quản lý khóa học
+            </a>
+            <a href="{{ url_for('create_course') }}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus me-1"></i> Tạo khóa học mới
+            </a>
+        </div>
+    </div>
+
+    <!-- 4 Khối KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div>
+                    <div class="stat-title">Tổng Khóa Học</div>
+                    <div class="stat-val">{{ stats.total_courses }}</div>
+                </div>
+                <div class="stat-icon-wrap icon-blue">
+                    <i class="fa-solid fa-book"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div>
+                    <div class="stat-title">Tổng Học Viên</div>
+                    <div class="stat-val">{{ stats.total_students }}</div>
+                </div>
+                <div class="stat-icon-wrap icon-green">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div>
+                    <div class="stat-title">Doanh Thu Thực Nhận</div>
+                    <div class="stat-val text-success">{{ "{:,.0f}".format(stats.net_revenue).replace(',', '.') }} ₫</div>
+                </div>
+                <div class="stat-icon-wrap icon-amber">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card">
+                <div>
+                    <div class="stat-title">Chứng Chỉ Đã Cấp</div>
+                    <div class="stat-val">{{ stats.total_certificates }}</div>
+                </div>
+                <div class="stat-icon-wrap icon-purple">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Biểu đồ doanh thu 7 ngày -->
+    <div class="dashboard-card">
+        <div class="dashboard-card-title">
+            <i class="fa-solid fa-chart-line text-primary"></i> Biểu đồ Doanh Thu Thực Nhận (7 ngày gần nhất)
+        </div>
+        <div style="position: relative; height: 300px; width: 100%;">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Bảng hiệu suất từng khóa học -->
+    <div class="dashboard-card">
+        <div class="dashboard-card-title">
+            <i class="fa-solid fa-table-list text-primary"></i> Chi Tiết Hiệu Suất Từng Khóa Học
+        </div>
+        <div class="table-responsive">
+            <table class="table custom-table">
+                <thead>
+                    <tr>
+                        <th>Khóa học</th>
+                        <th>Thể loại</th>
+                        <th>Giá bán</th>
+                        <th>Học viên</th>
+                        <th>Đánh giá</th>
+                        <th>Doanh thu nhận</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if courses and courses|length > 0 %}
+                        {% for c in courses %}
+                        <tr>
+                            <td>
+                                <strong>{{ c.name }}</strong>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ c.category }}</span></td>
+                            <td>
+                                {% if c.price > 0 %}
+                                {{ "{:,.0f}".format(c.price).replace(',', '.') }} ₫
+                                {% else %}
+                                <span class="badge bg-success-subtle text-success">Miễn phí</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ c.students }}</strong> học viên</td>
+                            <td>
+                                <span class="text-warning"><i class="fa-solid fa-star"></i></span>
+                                <strong>{{ c.rating }}</strong>
+                            </td>
+                            <td class="text-success fw-bold">
+                                {{ "{:,.0f}".format(c.revenue).replace(',', '.') }} ₫
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('course_detail', course_id=c.id) }}" class="btn btn-sm btn-outline-primary" title="Xem chi tiết">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                                <a href="{{ url_for('update_course', course_id=c.id) }}" class="btn btn-sm btn-outline-secondary" title="Chỉnh sửa">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted fst-italic">
+                                Bạn chưa tạo khóa học nào đang hoạt động.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<!-- Thư viện Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Nạp dữ liệu biến từ Jinja2 -->
+<script>
+    window.teacherChartData = {
+        labels: {{ chart_data.labels | tojson }},
+        data: {{ chart_data.data | tojson }}
+    };
+</script>
+
+<!-- File script xử lý riêng -->
+<script src="{{ url_for('static', filename='js/teacher_dashboard.js') }}"></script>
+{% endblock %}

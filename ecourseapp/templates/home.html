@@ -109,7 +109,20 @@
         </button>
     </div>
 
+    
+
     <div class="carousel-dots" id="dots"></div>
+    <!-- KHỐI NÚT ĐIỀU HƯỚNG MỚI THÊM -->
+    <div style="text-align: center; margin-top: 3.5rem;">
+        <a href="{{ url_for('get_all_courses') }}" class="btn-primary" 
+           style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 0.8rem 2rem; border-radius: 8px; font-weight: 600; background-color: #2563eb; color: white;">
+            Xem tất cả khóa học
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+            </svg>
+        </a>
+    </div>
 </section>
 {% endblock %}
 {% block js %}

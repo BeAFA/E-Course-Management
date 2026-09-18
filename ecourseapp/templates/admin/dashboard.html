@@ -1,57 +1,8 @@
 {% extends 'admin/master.html' %}
 
-{% block head_css %}
-{{ super() }}
-<style>
-    .dashboard-container {
-        padding: 20px;
-        background-color: #f8f9fa;
-        font-family: Arial, sans-serif;
-    }
-    .card-box {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-    .stat-card {
-        text-align: center;
-        border: 1px solid #ccc;
-        padding: 15px;
-        background: #fff;
-    }
-    .stat-title {
-        font-size: 16px;
-        color: #333;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-    .stat-value {
-        font-size: 22px;
-        font-weight: bold;
-        color: #000;
-    }
-    .stat-sub {
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-        display: flex;
-        justify-content: space-around;
-    }
-    .table-custom th {
-        background-color: #a6a6a6 !important;
-        color: #333;
-        text-align: center;
-    }
-    .table-custom td {
-        text-align: center;
-        vertical-align: middle;
-    }
-</style>
-{% endblock %}
 
 {% block body %}
+<link href="/static/css/admin/dashboard.css" rel="stylesheet">
 <div class="dashboard-container">
     <h3 class="mb-3">Quản lý khóa học và người dùng</h3>
 
@@ -92,13 +43,15 @@
                 {% if kw %}<input type="hidden" name="kw" value="{{ kw }}">{% endif %}
                 {% if sort_by %}<input type="hidden" name="sort_by" value="{{ sort_by }}">{% endif %}
                 <select name="days" class="form-control" onchange="this.form.submit()">
-                    <option value="7" {% if days == 7 %}selected{% endif %}>7 ngày qua</option>
-                    <option value="30" {% if days == 30 %}selected{% endif %}>30 ngày qua</option>
+                    <option value="7" {% if days==7 %}selected{% endif %}>7 ngày qua</option>
+                    <option value="30" {% if days==30 %}selected{% endif %}>30 ngày qua</option>
                 </select>
             </form>
         </div>
         <div style="height: 300px;">
             <canvas id="revenueChart"></canvas>
+            <script id="chart-labels-data" type="application/json">{{ chart_data.labels | tojson | safe }}</script>
+            <script id="chart-values-data" type="application/json">{{ chart_data.data | tojson | safe }}</script>
         </div>
     </div>
 
@@ -107,11 +60,15 @@
             <h4 class="m-0">Quản lý dữ liệu tổng hợp</h4>
             <form method="GET" action="" class="form-inline">
                 {% if days %}<input type="hidden" name="days" value="{{ days }}">{% endif %}
-                <input type="text" name="kw" value="{{ kw or '' }}" class="form-control mr-2" placeholder="Tìm kiếm khóa học...">
+                <input type="text" name="kw" value="{{ kw or '' }}" class="form-control mr-2"
+                    placeholder="Tìm kiếm khóa học...">
                 <select name="sort_by" class="form-control mr-2" onchange="this.form.submit()">
-                    <option value="revenue_asc" {% if sort_by == 'revenue_asc' %}selected{% endif %}>Doanh thu tăng dần</option>
-                    <option value="revenue_desc" {% if sort_by == 'revenue_desc' %}selected{% endif %}>Doanh thu giảm dần</option>
-                    <option value="student_desc" {% if sort_by == 'student_desc' %}selected{% endif %}>Học viên đông nhất</option>
+                    <option value="revenue_asc" {% if sort_by=='revenue_asc' %}selected{% endif %}>Doanh thu tăng dần
+                    </option>
+                    <option value="revenue_desc" {% if sort_by=='revenue_desc' %}selected{% endif %}>Doanh thu giảm dần
+                    </option>
+                    <option value="student_desc" {% if sort_by=='student_desc' %}selected{% endif %}>Học viên đông nhất
+                    </option>
                 </select>
                 <button type="submit" class="btn btn-secondary">Lọc</button>
             </form>
@@ -153,7 +110,9 @@
             <ul class="pagination">
                 {% for page_num in range(1, table_data.total_pages + 1) %}
                 <li class="page-item {% if page_num == table_data.current_page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('admin.index', page=page_num, kw=kw, sort_by=sort_by, days=days) }}">{{ page_num }}</a>
+                    <a class="page-link"
+                        href="{{ url_for('admin.index', page=page_num, kw=kw, sort_by=sort_by, days=days) }}">{{
+                        page_num }}</a>
                 </li>
                 {% endfor %}
             </ul>
@@ -161,41 +120,7 @@
         {% endif %}
     </div>
 </div>
-{% endblock %}
 
-{% block tail_js %}
-{{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    (function() {
-        const chartLabels = JSON.parse('{{ chart_data.labels | tojson | safe }}');
-        const chartDataValues = JSON.parse('{{ chart_data.data | tojson | safe }}');
-
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Doanh thu (nghìn đồng)',
-                    data: chartDataValues,
-                    borderColor: '#2b6cb0',
-                    backgroundColor: 'rgba(43, 108, 176, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    })();
-</script>
+<script src="/static/js/admin/admin.js"></script>
 {% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/create_test.css">
+
+<div class="create-test-wrapper">
+    <div class="test-header flex-space-between">
+        <div>
+            <h2><i class="fa-solid fa-list-check"></i> Bài Thi Của Chương</h2>
+            <div class="test-header-sub">Mỗi chương có tối đa 1 bài kiểm tra trắc nghiệm</div>
+        </div>
+        {% if not test %}
+        <a href="/chapters/{{ chapter_id }}/tests/add" class="btn-main-action btn-save-test" style="text-decoration: none;">
+            <i class="fa-solid fa-plus"></i> Tạo bài thi
+        </a>
+        {% endif %}
+    </div>
+
+    {% if test %}
+        <div class="test-card mb-3">
+            <div class="block-title">
+                <a href="/tests/{{ test.id }}" class="fs-5 fw-bold text-primary text-decoration-none" title="Xem chi tiết câu hỏi">
+                    <i class="fa-solid fa-pen-to-square me-1"></i> {{ test.name }}
+                </a>
+                <div>
+                    <span class="q-badge me-2">Thang điểm: {{ test.total_score or 10 }}</span>
+                    <!-- Nút nhân bản/làm mới bài thi -->
+                    <a href="/tests/{{ test.id }}/clone" class="btn-clone-q me-2" title="Chỉnh sửa hoặc tạo bản sao thay thế">
+                        <i class="fa-solid fa-copy me-1"></i> Nhân bản / Sửa
+                    </a>
+                    <!-- Nút xóa bài thi -->
+                    <form action="/tests/{{ test.id }}/delete" method="POST" style="display: inline-block;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa bài thi này khỏi chương?');">
+                        <button type="submit" class="btn-del-q">
+                            <i class="fa-solid fa-trash-can me-1"></i> Xóa
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <p class="text-muted mb-0" style="font-size: 14px;">{{ test.description or 'Không có mô tả.' }}</p>
+            <small class="text-secondary mt-2 d-block" style="font-size: 12px;">Số câu hỏi: {{ test.questions|length }} câu</small>
+        </div>
+    {% else %}
+        <div class="test-card text-center py-5" style="text-align: center !important;">
+            <h4 class="text-muted">Chương này chưa có bài thi nào!</h4>
+            <p class="text-secondary">Hãy bấm vào nút bên dưới để thiết lập đề thi trắc nghiệm.</p>
+            <a href="/chapters/{{ chapter_id }}/tests/add" class="btn-main-action btn-add-q mt-3" style="text-decoration: none; margin-top: 15px;">
+                <i class="fa-solid fa-plus"></i> Tạo bài thi ngay
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

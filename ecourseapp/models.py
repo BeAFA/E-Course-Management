@@ -61,8 +61,9 @@ class User(Base, UserMixin):
     messages = db.relationship(
         "ChatRoomMessage", foreign_keys="ChatRoomMessage.sender_id", back_populates="sender"
     )
-    ai_chat_room_messages = db.relationship("AIChatRoomMessage", foreign_keys="AIChatRoomMessage.user_id",
-                                            back_populates="user")
+    ai_chat_room_messages = db.relationship(
+        "AIChatRoomMessage", foreign_keys="AIChatRoomMessage.user_id", back_populates="user"
+    )
     user_chats = db.relationship("AIChatRoom", foreign_keys="AIChatRoom.user_id", back_populates="user")
     course_recommendations = db.relationship("CourseRecommendation", back_populates="user")
     enrollments = db.relationship("Enrollment", back_populates="user")
@@ -160,8 +161,6 @@ class Rating(Base):
 
 
 # ================= Course - Tag =================
-# Nếu bảng trung gian không cần thêm field nào và chỉ dùng để nối, SQLAlchemy cho phép dùng secondary=
-# (association table đơn giản, không cần model riêng) — gọn hơn là tạo hẳn 1 class như CourseTag.
 class CourseTag(Base):
     __tablename__ = "course_tag"
 
@@ -190,10 +189,9 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    test = db.relationship(
+    tests = db.relationship(
         "Test",
         back_populates="chapter",
-        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -219,7 +217,7 @@ class Lesson(Base):
     chapter = db.relationship("Chapter", back_populates="lessons")
 
     def __str__(self):
-        return self.name
+        return self.title
 
 
 # ================= Test =================
@@ -228,10 +226,10 @@ class Test(Base):
 
     name = db.Column(db.String(80), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False, unique=True)
+    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False)
     total_score = db.Column(db.Float, nullable=True)
 
-    chapter = db.relationship("Chapter", back_populates="test")
+    chapter = db.relationship("Chapter", back_populates="tests")
 
     questions = db.relationship(
         "Question",
@@ -323,15 +321,19 @@ class ChatRoomMessage(Base):
     chat_room = db.relationship("ChatRoom", back_populates="messages")
 
 
-# ================= AI Chat Room=================
+# ================= AI Chat Room =================
 class AIChatRoom(Base):
     __tablename__ = "ai_chat_room"
 
     user_id = db.Column(db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
 
-    ai_chat_messages = db.relationship("AIChatRoomMessage", back_populates="ai_chat_room", cascade="all, delete-orphan",
-                                       passive_deletes=True, )
+    ai_chat_messages = db.relationship(
+        "AIChatRoomMessage",
+        back_populates="ai_chat_room",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     user = db.relationship("User", back_populates="user_chats")
 
     def __str__(self):
@@ -403,27 +405,22 @@ class PaymentHistory(Base):
     course = db.relationship("Course", back_populates="payments")
 
 
-# ================= Commission =================
-class Commission(Base):
-    __tablename__ = "commission"
+# ================= Certificate =================
+class Certificate(Base):
+    __tablename__ = 'certificate'
 
-    total_amount = db.Column(db.Float, default=0.0, nullable=False)
+    code = db.Column(db.String(50), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
 
-    @classmethod
-    def add_commission(cls, amount):
-        commission = cls.query.first()
-        if not commission:
-            commission = cls(total_amount=amount)
-            db.session.add(commission)
-        else:
-            commission.total_amount += amount
+    user = db.relationship('User', backref=db.backref('certificates', lazy=True))
+    course = db.relationship('Course', backref=db.backref('certificates', lazy=True))
+
+    def __str__(self):
+        return f"Chứng chỉ {self.code} - Học viên ID: {self.user_id} - Khóa học ID: {self.course_id}"
+
+
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
         db.session.commit()
-        return commission.total_amount
-
-# cd vào thư mục ecourseapp rồi chạy python seed_data.py trong Command Prompt để tạo bảng và tạo dữ liệu mẫu
-
-# if __name__ == "__main__":
-#     with app.app_context():
-#         db.create_all()
-#
-#         db.session.commit()

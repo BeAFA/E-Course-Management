@@ -1,0 +1,68 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my_enrolled_courses.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="enrolled-container">
+    <div class="page-header-box">
+        <div>
+            <h2 class="page-header-title">
+                <i class="fa-solid fa-graduation-cap text-primary me-2"></i>Khóa học của tôi
+            </h2>
+            <div class="page-header-subtitle">Danh sách tất cả các khóa học bạn đã đăng ký tham gia</div>
+        </div>
+        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-compass me-1"></i> Khám phá thêm khóa học
+        </a>
+    </div>
+
+    {% if courses and courses|length > 0 %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for item in courses %}
+        {% set course = item.data %}
+        {% set prog = item.progress %}
+        <div class="col">
+            <div class="course-card-enrolled">
+                <div class="course-thumb-wrap">
+                    <img src="{{ course.image or '/static/img/logo.png' }}" alt="{{ course.name }}" class="course-thumb">
+                </div>
+                <div class="course-body-wrap">
+                    <h3 class="course-card-title">{{ course.name }}</h3>
+                    <p class="course-desc-brief">
+                        {{ course.description | striptags | truncate(90) if course.description else 'Chưa có mô tả chi tiết.' }}
+                    </p>
+                    
+                    <!-- THANH TIẾN ĐỘ HỌC TẬP -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between text-muted" style="font-size: 12px; margin-bottom: 4px;">
+                            <span>Tiến độ hoàn thành:</span>
+                            <strong class="text-primary">{{ prog }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px; border-radius: 4px; background-color: #e2e8f0;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ prog }}%;" aria-valuenow="{{ prog }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+
+                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn-enter-course">
+                        Vào học ngay <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-enrolled-box">
+        <i class="fa-solid fa-book-open-reader empty-enrolled-icon"></i>
+        <h4 class="empty-enrolled-title">Bạn chưa đăng ký khóa học nào!</h4>
+        <p class="empty-enrolled-desc">Hãy tìm kiếm và đăng ký các khóa học để bắt đầu lộ trình học tập.</p>
+        <a href="{{ url_for('home') }}" class="btn btn-primary px-4 py-2">
+            Tìm khóa học ngay
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

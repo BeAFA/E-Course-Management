@@ -1,0 +1,113 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat_room.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="chat-page-container">
+    <div class="chat-card {{ 'with-sidebar' if student_rooms else '' }}">
+        
+        {% if student_rooms %}
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <h3>Danh sách học viên</h3>
+                <span class="badge-count">{{ student_rooms|length }}</span>
+            </div>
+            
+            <div class="sidebar-list">
+                {% for s_room in student_rooms %}
+                <a href="{{ url_for('open_chat_room', room_id=s_room.id) }}" 
+                   class="sidebar-item {{ 'active' if s_room.id == room.id else '' }}">
+                   
+                    <div class="avatar-circle">
+                        {% if s_room.student.img_url and s_room.student.img_url != '' %}
+                            <img src="{{ s_room.student.img_url }}" alt="{{ s_room.student.name }}">
+                        {% else %}
+                            <span>{{ s_room.student.name[0] | upper }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="sidebar-user-info">
+                        <span class="sidebar-user-name">{{ s_room.student.name }}</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="chat-main-area">
+            <div class="chat-header">
+                <div class="header-info">
+                    <a href="{{ url_for('course_detail', course_id=course.id) }}" class="btn-back" title="Quay lại khóa học">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </a>
+                    <div class="room-meta">
+                        <h2 class="room-title">Phòng hỏi đáp: {{ course.name }}</h2>
+                        <p class="room-subtitle">
+                            {% if current_user.id == room.student_id %}
+                            Trò chuyện với Giảng viên: <strong>{{ room.teacher.name }}</strong>
+                            {% else %}
+                            Học viên: <strong>{{ room.student.name }}</strong>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="header-status">
+                    <span class="status-indicator"></span> Trực tuyến
+                </div>
+            </div>
+
+            <div class="chat-body" id="chatBox">
+                {% if messages %}
+                    {% for msg in messages %}
+                    {% set is_me = (msg.sender_id == current_user.id) %}
+                    <div class="message-row {{ 'me' if is_me else 'other' }}">
+                        <div class="avatar-circle" title="{{ msg.sender.name }}">
+                            {% if msg.sender.img_url and msg.sender.img_url != '' %}
+                            <img src="{{ msg.sender.img_url }}">
+                            {% else %}
+                            <span>{{ msg.sender.name[0] | upper }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="message-bubble-wrapper">
+                            <div class="message-sender">{{ msg.sender.name }}</div>
+                            <div class="message-bubble">{{ msg.content }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" id="emptyState">
+                        <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="chat-footer">
+                <form id="chatForm" class="chat-form">
+                    <input type="text" id="msgInput" placeholder="Nhập nội dung tin nhắn..." autocomplete="off" required>
+                    <button type="submit" class="btn-send" id="sendBtn">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>Gửi</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+<script>
+    const CHAT_CONFIG = {
+        roomId: "{{ room.id }}",
+        currentUserId: Number("{{ current_user.id }}"),
+        currentUserName: "{{ current_user.name }}"
+    };
+</script>
+<script src="{{ url_for('static', filename='js/chat_room.js') }}"></script>
+{% endblock %}

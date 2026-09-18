@@ -1,0 +1,140 @@
+/* Container danh sách chứng chỉ */
+.cert-page-container {
+    max-width: 1140px;
+    margin: 36px auto 60px auto;
+    padding: 0 16px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.cert-grid-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-top: 4px solid #f59e0b;
+}
+
+.cert-grid-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.15);
+}
+
+.cert-badge-ribbon {
+    width: 50px;
+    height: 50px;
+    background: #fef3c7;
+    color: #d97706;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 16px;
+}
+
+/* Trang xem chi tiết & In chứng chỉ */
+.cert-view-wrapper {
+    max-width: 900px;
+    margin: 30px auto 60px auto;
+    padding: 0 15px;
+}
+
+.cert-paper {
+    background: #ffffff;
+    padding: 50px 60px;
+    border: 12px solid #1e3a8a;
+    outline: 3px solid #f59e0b;
+    outline-offset: -8px;
+    border-radius: 4px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    text-align: center;
+    position: relative;
+}
+
+.cert-title-top {
+    font-family: 'Georgia', serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #1e3a8a;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.cert-subtitle {
+    font-size: 14px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 25px;
+}
+
+.cert-recipient-name {
+    font-family: 'Brush Script MT', 'Great Vibes', cursive, 'Georgia', serif;
+    font-size: 42px;
+    color: #0f172a;
+    margin: 15px 0;
+    border-bottom: 2px dashed #cbd5e1;
+    display: inline-block;
+    padding: 0 30px 10px 30px;
+}
+
+.cert-statement {
+    font-size: 15.5px;
+    color: #475569;
+    max-width: 650px;
+    margin: 0 auto 20px auto;
+    line-height: 1.6;
+}
+
+.cert-course-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2563eb;
+    margin-bottom: 35px;
+}
+
+.cert-footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 40px;
+    padding-top: 20px;
+}
+
+.cert-sign-col {
+    text-align: center;
+}
+
+.cert-sign-line {
+    width: 180px;
+    border-bottom: 1.5px solid #334155;
+    margin: 0 auto 8px auto;
+}
+
+/* Đảm bảo khi bấm In/Ctrl+P chỉ in khung bằng chứng chỉ */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .cert-paper, .cert-paper * {
+        visibility: visible;
+    }
+    .cert-paper {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        border-width: 8px;
+        box-shadow: none;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
