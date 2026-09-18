@@ -1,20 +1,26 @@
+import json
 import os
-import requests
-from flask_login import login_user, logout_user, current_user, login_required
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for, flash
-from google.auth.transport.requests import Request as GoogleAuthRequest
-from werkzeug.utils import secure_filename
-from flask_socketio import SocketIO, emit, join_room
-from datetime import datetime
+from datetime import datetime, timezone
 
-from __init__ import app, db, login, VNPAY_CONFIG
+import requests
+from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for, flash
+from flask_login import login_user, logout_user, current_user, login_required
+from flask_socketio import SocketIO, emit, join_room
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.genai import types
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+
+from __init__ import app, db, login, client, GEMINI_MODEL, SYSTEM_INSTRUCTION, VNPAY_CONFIG
+from ai_chat_routes import RESPONSE_SCHEMA, _build_courses_context, MAX_TURNS_SENT, _serialize_message
 from services.drive_service import upload_file, credentials, delete_file
-from models import User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag, ChatRoom, ChatRoomMessage, Question, Test, Choice, UserTest
+from models import (
+    User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag,
+    ChatRoom, ChatRoomMessage, Question, Test, Choice, UserTest,
+    CourseRecommendation, SenderType, AIChatRoomMessage, AIChatRoom
+)
 import dao
 from vnpay import vnpay
-
-import admin
 
 TEMP_UPLOAD_DIR = "temp"
 
@@ -26,6 +32,10 @@ DEFAULT_COURSE_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_COURSE_IMG_DR
 
 DEFAULT_LESSON_IMG_DRIVE_ID = "1DaVBg8l_Ze_b6CB0-4ThfxmIxpxE-ojU"
 DEFAULT_LESSON_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_LESSON_IMG_DRIVE_ID}"
+
+MAX_MESSAGE_LENGTH = 500
+
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 @app.route('/')
@@ -73,6 +83,9 @@ def register_new_user():
         password = request.form.get("password")
         confirm = request.form.get("confirm")
         role = request.form.get("role")
+
+        if role is None:
+            role = "STUDENT"
 
         if password != confirm:
             return render_template("register.html", err_msg="Xác nhận mật khẩu không khớp!")
@@ -193,18 +206,70 @@ def update_password():
 @app.route('/courses')
 def get_all_courses():
     kw = request.args.get('kw')
-    rating_min = request.args.get('rating')  
+    rating_min = request.args.get('rating')
     price_sort = request.args.get('price_sort')
-    category_id = request.args.get('category_id') 
+    category_id = request.args.get('category_id')
+    ids_param = request.args.get('ids')
+
+    course_ids = None
+    if ids_param:
+        course_ids = [int(x) for x in ids_param.split(',') if x.strip().isdigit()]
+
     categories = dao.get_categories()
-    
+
     courses = dao.get_courses(
-        kw=kw, 
-        category_id=category_id, 
-        rating_min=rating_min, 
-        price_sort=price_sort
+        kw=kw,
+        category_id=category_id,
+        rating_min=rating_min,
+        price_sort=price_sort,
+        course_ids=course_ids
     )
-    return render_template("courses.html", courses=courses, categories=categories)
+
+    return render_template(
+        "courses.html",
+        courses=courses,
+        categories=categories,
+        is_ai_recommendation=bool(ids_param),
+        no_ai_history=request.args.get('no_ai_history')
+    )
+
+
+@app.route('/courses/recommended')
+def view_recommended_courses():
+    if not current_user.is_authenticated:
+        return redirect(url_for('login_my_user', next=request.url))
+
+    course_ids = dao.get_recommended_course_ids_for_user(current_user.id)
+    if not course_ids:
+        return redirect(url_for('get_all_courses', no_ai_history=1))
+
+    ids_str = ",".join(str(i) for i in course_ids)
+    return redirect(url_for('get_all_courses', ids=ids_str))
+
+
+@app.route('/courses/recommended/dismiss', methods=['POST'])
+def dismiss_recommended_courses():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    data = request.get_json(force=True)
+    raw_ids = data.get('course_ids', [])
+
+    try:
+        course_ids = [int(cid) for cid in raw_ids]
+    except (TypeError, ValueError):
+        return jsonify({"error": "Danh sách ID không hợp lệ"}), 400
+
+    if not course_ids:
+        return jsonify({"error": "Chưa chọn khóa học nào"}), 400
+
+    try:
+        dao.dismiss_recommended_courses(current_user.id, course_ids)
+        return jsonify({"success": True, "removed": course_ids})
+    except Exception as ex:
+        db.session.rollback()
+        print(ex)
+        return jsonify({"error": "Có lỗi xảy ra, vui lòng thử lại"}), 500
 
 
 @app.route('/courses/my_courses')
@@ -217,11 +282,11 @@ def get_my_course():
         c.tag_names = dao.get_course_tag(c.id)
     return render_template("my_courses.html", courses=courses)
 
+
 @app.route('/my_enrolled_courses')
 @login_required
 def my_enrolled_courses():
     courses = dao.get_enrolled_courses_by_user(current_user.id)
-    # Gắn thêm tiến độ cho từng khóa
     course_list = []
     for c in courses:
         prog = dao.get_user_course_progress(current_user.id, c.id)
@@ -230,6 +295,7 @@ def my_enrolled_courses():
             'progress': prog
         })
     return render_template('my_enrolled_courses.html', courses=course_list)
+
 
 @app.route('/courses/<int:course_id>')
 def course_detail(course_id):
@@ -248,15 +314,13 @@ def course_detail(course_id):
         is_owner = dao.is_course_owner(current_user, course)
         is_enrolled = bool(dao.check_enrollment(current_user.id, course.id))
 
-        # Tính tiến độ & lấy đánh giá của học viên hiện tại
         if is_enrolled:
             progress = dao.get_user_course_progress(current_user.id, course_id)
             completed_test_ids = dao.get_user_completed_test_ids(current_user.id, course_id)
             user_rating = dao.get_user_rating_for_course(current_user.id, course_id)
         elif is_owner:
-            progress = 100  # Giảng viên luôn là 100%
+            progress = 100
 
-    # Lấy thống kê số sao và toàn bộ danh sách đánh giá của khóa học
     rating_stats = dao.get_course_rating_stats(course_id)
     ratings = dao.get_course_ratings(course_id)
 
@@ -278,7 +342,6 @@ def rate_course(course_id):
     if not current_user.is_authenticated:
         return redirect('/login')
 
-    # Chỉ cho phép tài khoản học viên đánh giá
     if current_user.role != UserRole.STUDENT:
         flash("Chỉ học viên mới có quyền đánh giá khóa học!", "error")
         return redirect(f'/courses/{course_id}')
@@ -286,7 +349,6 @@ def rate_course(course_id):
     raw_rating = request.form.get('rating')
     comment = request.form.get('comment', '').strip()
 
-    # Kiểm tra tính hợp lệ của số sao (1 đến 5 sao)
     if not raw_rating or not str(raw_rating).isdigit() or not (1 <= int(raw_rating) <= 5):
         flash("Vui lòng chọn mức đánh giá hợp lệ (từ 1 đến 5 sao)!", "error")
         return redirect(f'/courses/{course_id}')
@@ -319,10 +381,9 @@ def create_course():
         description = request.form.get('description', '').strip()
         selected_tag_ids = request.form.getlist('tag_ids')
 
-        # 1. Bắt buộc chọn ít nhất một tag
         if not selected_tag_ids:
             return render_template(
-                'create_course.html', # Đổi đúng tên template tạo khóa học của bạn
+                'create_course.html',
                 categories=categories,
                 tags=tags,
                 err_msg="Vui lòng chọn ít nhất một thẻ Tag cho khóa học!"
@@ -336,12 +397,9 @@ def create_course():
                 err_msg="Vui lòng nhập đầy đủ tên khóa học và thể loại!"
             )
 
-        # 2. Xử lý ảnh thumbnail (nếu có logic Drive từ trước)
         img_drive_id = None
         img_url = None
-        # ... logic upload ảnh Drive của bạn nếu có ...
 
-        # 3. Tạo khóa học và lưu tag vào CourseTag qua DAO
         try:
             new_course = dao.create_course(
                 name=name,
@@ -383,9 +441,7 @@ def update_course(course_id):
         return render_template("home.html", err_msg=err_msg)
 
     categories = dao.get_categories()
-    tags = dao.get_all_tags()  # 1. Lấy toàn bộ danh sách tags
-
-    # 2. Lấy danh sách ID các tag khóa học này đang sở hữu để tự động checked
+    tags = dao.get_all_tags()
     current_tag_ids = [ct.tag_id for ct in course.course_tags]
 
     if request.method == 'POST':
@@ -393,7 +449,7 @@ def update_course(course_id):
         price = request.form.get('price')
         category_id = request.form.get('category_id')
         description = request.form.get('description')
-        selected_tag_ids = request.form.getlist('tag_ids')  # 3. Lấy các tag được tick
+        selected_tag_ids = request.form.getlist('tag_ids')
 
         img_drive_id = course.img_drive_id
         img_url = course.img_url
@@ -422,7 +478,6 @@ def update_course(course_id):
             img_drive_id = uploaded_id
             img_url = uploaded_url
 
-        # Kiểm tra validation tên, danh mục và bắt buộc chọn ít nhất 1 tag
         if not name or not category_id:
             err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
             return render_template(
@@ -446,7 +501,6 @@ def update_course(course_id):
             )
 
         try:
-            # 4. Truyền selected_tag_ids vào dao.update_course (thay vì None)
             dao.update_course(
                 course=course,
                 name=name,
@@ -503,7 +557,6 @@ def bulk_update_course_status():
         return jsonify({"success": False, "message": "Có lỗi xảy ra, vui lòng thử lại"}), 500
 
 
-# 1. Thêm chương mới
 @app.route('/courses/<int:course_id>/chapters/add', methods=["GET", "POST"])
 def add_chapters(course_id):
     course = dao.get_course_by_id(course_id)
@@ -537,7 +590,6 @@ def add_chapters(course_id):
     return render_template("create_chapter.html", course=course)
 
 
-# 2. Cập nhật chương
 @app.route('/courses/<int:course_id>/chapters/<int:chapter_id>/update', methods=["GET", "POST"])
 def update_chapters(course_id, chapter_id):
     if not current_user.is_authenticated:
@@ -572,7 +624,7 @@ def update_chapters(course_id, chapter_id):
 
     return render_template("create_chapter.html", course=course, chapter=chapter)
 
-# 3. Xóa mềm chương (Cascade xóa mềm bài học và bài thi con)
+
 @app.route('/courses/<int:course_id>/chapters/<int:chapter_id>/delete', methods=["POST"])
 def delete_chapter(course_id, chapter_id):
     if not current_user.is_authenticated:
@@ -588,14 +640,11 @@ def delete_chapter(course_id, chapter_id):
         return redirect(f"/courses/{course_id}")
 
     try:
-        # Xóa mềm chương
         chapter.is_active = False
 
-        # Cascade: Xóa mềm toàn bộ bài học thuộc chương
         for lesson in chapter.lessons:
             lesson.is_active = False
 
-        # Cascade: Xóa mềm toàn bộ bài thi thuộc chương
         for test in chapter.tests:
             test.is_active = False
 
@@ -608,7 +657,7 @@ def delete_chapter(course_id, chapter_id):
 
     return redirect(f"/courses/{course_id}")
 
-# 1. Danh sách bài học của chương (Chỉ lấy bài is_active=True)
+
 @app.route('/chapters/<int:chapter_id>/lessons')
 @login_required
 def lessons(chapter_id):
@@ -625,13 +674,11 @@ def lessons(chapter_id):
         flash("Cảnh báo: Bạn cần đăng ký khóa học để xem nội dung bài giảng này!", "error")
         return redirect(url_for('course_detail', course_id=course.id))
 
-    # Chỉ lọc các bài học đang active
     active_lessons = [l for l in chapter.lessons if l.is_active]
 
     return render_template('lesson.html', chapter=chapter, course=course, is_owner=is_owner, lessons=active_lessons)
 
 
-# 2. Tạo mới hoặc Cập nhật bài học
 @app.route("/chapters/<int:chapter_id>/lessons/add", methods=["GET", "POST"])
 @app.route("/lessons/<int:lesson_id>/update", methods=["GET", "POST"])
 def create_or_update_lesson(chapter_id=None, lesson_id=None):
@@ -669,20 +716,17 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
 
         os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
 
-        # 1. XỬ LÝ VIDEO
         video_drive_id = lesson.video_drive_id if lesson else None
         video_url = lesson.video_url if lesson else None
         old_video_drive_id = video_drive_id
         video_replaced = False
 
         video = request.files.get("video")
-        # Kiểm tra chặt chẽ: phải có file, filename không rỗng
         if video and video.filename and video.filename.strip() != '':
             filename = secure_filename(video.filename)
             filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
             video.save(filepath)
 
-            # Kiểm tra file đã lưu có kích thước > 0 không
             if os.path.getsize(filepath) > 0:
                 try:
                     uploaded_id, uploaded_url = upload_file(filepath, filename)
@@ -706,7 +750,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
                 if os.path.exists(filepath):
                     os.remove(filepath)
 
-        # 2. XỬ LÝ TÀI LIỆU PDF
         file_drive_id = lesson.file_drive_id if lesson else None
         file_url = lesson.file_url if lesson else None
         old_file_drive_id = file_drive_id
@@ -731,7 +774,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
             file_drive_id, file_url = uploaded_id, uploaded_url
             file_replaced = True
 
-        # 3. XỬ LÝ ẢNH BÌA / HÌNH ẢNH MINH HỌA
         img_drive_id = lesson.img_drive_id if lesson else DEFAULT_LESSON_IMG_DRIVE_ID
         img_url = lesson.img_url if lesson else DEFAULT_LESSON_IMG_URL
         old_img_drive_id = img_drive_id
@@ -756,7 +798,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
             img_drive_id, img_url = uploaded_id, uploaded_url
             img_replaced = True
 
-        # LƯU VÀO DATABASE
         if lesson:
             lesson.title = title.strip()
             lesson.article = article
@@ -792,7 +833,6 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
                 err_msg="Lưu bài học thất bại, vui lòng thử lại."
             )
 
-        # XÓA FILE CŨ TRÊN DRIVE NẾU ĐÃ THAY MỚI THÀNH CÔNG
         if lesson_id:
             if video_replaced and old_video_drive_id:
                 try:
@@ -820,7 +860,7 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
         lesson=lesson
     )
 
-# 3. Xóa mềm bài học (is_active = False)
+
 @app.route("/lessons/<int:lesson_id>/delete", methods=["POST"])
 def delete_lesson(lesson_id):
     lesson = dao.get_lesson_by_id(lesson_id)
@@ -834,7 +874,6 @@ def delete_lesson(lesson_id):
         return redirect(f"/chapters/{chapter.id}/lessons")
 
     try:
-        # XÓA MỀM: Chỉ chuyển cờ is_active sang False (không xóa file trên Drive)
         lesson.is_active = False
         db.session.commit()
         flash(f"Đã xóa bài học '{lesson.title}' thành công!", "success")
@@ -863,7 +902,6 @@ def lesson_detail(lesson_id):
         flash("Bạn cần đăng ký khóa học để xem nội dung bài giảng này!", "error")
         return redirect(url_for('course_detail', course_id=course.id))
 
-    # Danh sách các bài học active trong chương để điều hướng
     active_lessons = [l for l in chapter.lessons if l.is_active]
 
     current_index = 0
@@ -917,19 +955,228 @@ def stream_video(file_id):
     return resp
 
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+# ---------------- AI CHAT ROUTES ----------------
+
+@app.route("/ai_chat")
+@app.route("/ai_chat/new")
+def ai_chat_page():
+    if not current_user.is_authenticated:
+        return redirect("/login")
+    return render_template("ai_chat.html")
+
+
+@app.route("/ai_chat/rooms", methods=["GET"])
+def list_ai_chat_rooms():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    rooms = (
+        AIChatRoom.query.filter_by(user_id=current_user.id)
+        .order_by(AIChatRoom.updated_date.desc())
+        .all()
+    )
+    return jsonify(
+        [
+            {
+                "id": r.id,
+                "title": r.title,
+                "updated_date": r.updated_date.isoformat() if r.updated_date else None,
+            }
+            for r in rooms
+        ]
+    )
+
+
+@app.route("/ai_chat/rooms", methods=["POST"])
+def create_ai_chat_room():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom(user_id=current_user.id, title="Cuộc trò chuyện mới")
+    db.session.add(room)
+    db.session.commit()
+    return jsonify({"id": room.id, "title": room.title})
+
+
+@app.route("/ai_chat/rooms/<int:room_id>", methods=["DELETE"])
+def delete_ai_chat_room(room_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom.query.get(room_id)
+    if not room or room.user_id != current_user.id:
+        return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
+
+    db.session.delete(room)
+    db.session.commit()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/ai_chat/rooms/<int:room_id>/messages", methods=["GET"])
+def get_ai_chat_messages(room_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom.query.get(room_id)
+    if not room or room.user_id != current_user.id:
+        return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
+
+    messages = (
+        AIChatRoomMessage.query.filter_by(ai_chat_room_id=room_id)
+        .order_by(AIChatRoomMessage.id.asc())
+        .all()
+    )
+    return jsonify(
+        {
+            "title": room.title,
+            "messages": [_serialize_message(m) for m in messages],
+        }
+    )
+
+
+@app.route("/ai_chat/rooms/<int:room_id>/messages", methods=["POST"])
+def send_ai_chat_message(room_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    room = AIChatRoom.query.get(room_id)
+    if not room or room.user_id != current_user.id:
+        return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
+
+    data = request.get_json(force=True)
+    user_message = (data or {}).get("message", "").strip()
+    if not user_message:
+        return jsonify({"error": "Tin nhắn rỗng"}), 400
+    if len(user_message) > MAX_MESSAGE_LENGTH:
+        return jsonify({
+            "error": f"Tin nhắn quá dài (tối đa {MAX_MESSAGE_LENGTH} ký tự)"
+        }), 400
+
+    user_msg = AIChatRoomMessage(
+        ai_chat_room_id=room_id,
+        user_id=current_user.id,
+        sender_type=SenderType.USER,
+        content=user_message,
+    )
+    db.session.add(user_msg)
+    db.session.commit()
+
+    history_rows = (
+        AIChatRoomMessage.query.filter_by(ai_chat_room_id=room_id)
+        .order_by(AIChatRoomMessage.id.asc())
+        .all()
+    )
+    history_rows = history_rows[-MAX_TURNS_SENT:]
+
+    contents = [
+        {
+            "role": "user" if m.sender_type == SenderType.USER else "model",
+            "parts": [{"text": m.content}],
+        }
+        for m in history_rows
+    ]
+
+    system_instruction = (
+        SYSTEM_INSTRUCTION
+        + "\n\nDanh sách khóa học hiện có (chỉ được điền course_ids nằm trong danh sách này):\n"
+        + _build_courses_context()
+        + "\n\nLuôn trả lời đúng theo JSON schema được cung cấp."
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.7,
+                response_mime_type="application/json",
+                response_schema=RESPONSE_SCHEMA,
+            ),
+        )
+        result = json.loads(response.text)
+        reply_text = (result.get("reply") or "").strip() or "Xin lỗi, mình chưa có câu trả lời phù hợp."
+        course_ids = result.get("course_ids") or []
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Lỗi khi gọi Gemini API: {e}"}), 500
+
+    ai_msg = AIChatRoomMessage(
+        ai_chat_room_id=room_id,
+        user_id=None,
+        sender_type=SenderType.AI,
+        content=reply_text,
+    )
+    db.session.add(ai_msg)
+    db.session.flush()
+
+    valid_courses = (
+        Course.query.filter(Course.id.in_(course_ids)).all() if course_ids else []
+    )
+    for c in valid_courses:
+        db.session.add(
+            CourseRecommendation(
+                user_id=current_user.id,
+                course_id=c.id,
+                ai_chat_room_message_id=ai_msg.id,
+            )
+        )
+
+    if room.title == "Cuộc trò chuyện mới":
+        room.title = user_message[:40] + ("..." if len(user_message) > 40 else "")
+
+    room.updated_date = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify(
+        {
+            "reply": reply_text,
+            "courses": [
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "category": c.category.name if c.category else "",
+                    "price": c.price or 0,
+                    "icon": "📘",
+                }
+                for c in valid_courses
+            ],
+        }
+    )
+
+
+@app.route("/ai_chat/recommendations", methods=["GET"])
+def get_ai_recommendations():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    courses = dao.get_recommended_courses_for_user(current_user.id)
+    return jsonify([
+        {
+            "id": c.id,
+            "name": c.name,
+            "category": c.category.name if c.category else "",
+            "price": c.price or 0,
+            "img_url": c.img_url,
+        }
+        for c in courses
+    ])
+
+
+# ---------------- SOCKET.IO & LIVE CHAT ROUTES ----------------
 
 @socketio.on('join_chat')
 def handle_join(data):
     room_id = str(data['room_id'])
     join_room(room_id)
 
+
 @socketio.on('send_message')
 def handle_send_message(data):
     room_id = data['room_id']
     content = data['content']
     sender_id = current_user.id
-    
+
     msg = ChatRoomMessage(
         chat_room_id=room_id,
         sender_id=sender_id,
@@ -937,7 +1184,7 @@ def handle_send_message(data):
     )
     db.session.add(msg)
     db.session.commit()
-    
+
     avatar_url = current_user.img_url if (current_user.img_url and str(current_user.img_url).strip() != "") else ""
     avatar_text = current_user.name[0].upper() if (current_user.name and len(current_user.name) > 0) else "U"
 
@@ -956,7 +1203,7 @@ def join_course_chat(course_id):
     if not course:
         flash("Khóa học không tồn tại!", "error")
         return redirect(url_for('home'))
-        
+
     if current_user.id == course.teacher_id:
         student_rooms = dao.get_teacher_chat_rooms(course.id, current_user.id)
         if student_rooms:
@@ -964,7 +1211,7 @@ def join_course_chat(course_id):
         else:
             err_msg = "Hiện chưa có học viên nào tham gia phòng hỏi đáp của khóa học này!"
             return render_template('course_detail.html', course=course, progress=35, err_msg=err_msg)
-            
+
     room = dao.get_or_create_chat_room(
         student_id=current_user.id,
         teacher_id=course.teacher_id,
@@ -979,38 +1226,40 @@ def open_chat_room(room_id):
     if not room:
         flash("Phòng trò chuyện không tồn tại hoặc đã bị xóa!", "error")
         return redirect(url_for('home'))
-    
+
     if current_user.id not in [room.student_id, room.teacher_id]:
         flash("Cảnh báo: Bạn không có quyền truy cập vào phòng trò chuyện của người khác!", "error")
         return redirect(url_for('course_detail', course_id=room.course_id))
-        
+
     messages = dao.get_chat_messages(room.id)
-    
+
     student_rooms = []
     if current_user.id == room.teacher_id:
         student_rooms = dao.get_teacher_chat_rooms(room.course_id, current_user.id)
-    
+
     return render_template(
-        'chat_room.html', 
-        room=room, 
-        course=room.course, 
+        'chat_room.html',
+        room=room,
+        course=room.course,
         messages=messages,
         student_rooms=student_rooms
     )
 
 
+# ---------------- THANH TOÁN VNPAY ----------------
+
 @app.route('/checkout/<int:course_id>')
-@login_required 
+@login_required
 def checkout(course_id):
     course = dao.get_course_by_id(course_id)
     if not course:
         flash("Không tìm thấy thông tin khóa học để thanh toán!", "error")
         return redirect(url_for('get_all_courses'))
-        
+
     if dao.check_enrollment(current_user.id, course.id):
         flash("Bạn đã đăng ký khóa học này rồi!", "info")
         return redirect(url_for('course_detail', course_id=course.id))
-        
+
     return render_template('checkout.html', course=course)
 
 
@@ -1022,14 +1271,14 @@ def process_checkout(course_id):
         dao.enroll_course(current_user.id, course.id)
         flash("Đăng ký khóa học miễn phí thành công!", "success")
         return redirect(url_for('course_detail', course_id=course.id))
-        
+
     vnp = vnpay()
     vnp.requestData['vnp_Version'] = '2.1.0'
     vnp.requestData['vnp_Command'] = 'pay'
     vnp.requestData['vnp_TmnCode'] = VNPAY_CONFIG['vnp_TmnCode']
     vnp.requestData['vnp_Amount'] = int(course.price) * 100
     vnp.requestData['vnp_CurrCode'] = 'VND'
-    
+
     txn_ref = f"{current_user.id}-{course.id}-{int(datetime.now().timestamp())}"
     vnp.requestData['vnp_TxnRef'] = txn_ref
     vnp.requestData['vnp_OrderInfo'] = f"Thanh toan khoa hoc {course.name}"
@@ -1047,17 +1296,17 @@ def process_checkout(course_id):
 def vnpay_return():
     vnp = vnpay()
     vnp.responseData = request.args.to_dict()
-    
+
     if vnp.validate_response(VNPAY_CONFIG['vnp_HashSecret']):
-        if vnp.responseData['vnp_ResponseCode'] == '00': 
+        if vnp.responseData['vnp_ResponseCode'] == '00':
             txn_ref = vnp.responseData['vnp_TxnRef']
             user_id, course_id, _ = txn_ref.split('-')
             amount = int(vnp.responseData['vnp_Amount']) / 100
-            
+
             if not dao.check_enrollment(user_id, course_id):
                 dao.save_payment_history(user_id, course_id, txn_ref, amount)
                 dao.enroll_course(user_id, course_id)
-            
+
             flash("Thanh toán thành công! Chào mừng bạn đến với khóa học.", "success")
             return redirect(url_for('course_detail', course_id=course_id))
         else:
@@ -1068,14 +1317,14 @@ def vnpay_return():
         return redirect(url_for('home'))
 
 
-# ================= CÁC ROUTE BÀI THI =================
+# ---------------- CÁC ROUTE BÀI THI ----------------
+
 @app.route('/chapters/<int:chapter_id>/tests')
 def test_list(chapter_id):
     chapter = dao.get_chapter_by_id(chapter_id)
     if not current_user.is_authenticated or not dao.is_chapter_owner(current_user, chapter):
         return redirect("/")
-    
-    # Quan hệ 1-1: chapter.test
+
     test = chapter.test if (chapter.test and chapter.test.is_active) else None
     return render_template("test_list.html", test=test, chapter_id=chapter_id)
 
@@ -1134,13 +1383,11 @@ def take_test(test_id):
         try:
             db.session.commit()
 
-            # ====== BƯỚC KIỂM TRA & CẤP CHỨNG CHỈ ======
             new_cert = None
             if test.chapter and test.chapter.course_id:
                 new_cert = dao.check_and_issue_certificate(current_user.id, test.chapter.course_id)
                 if new_cert:
                     flash("🎉 Chúc mừng! Bạn đã hoàn thành xuất sắc tất cả bài thi với điểm tuyệt đối và nhận được Chứng Chỉ Khóa Học!", "success")
-            # ==========================================
 
             return render_template(
                 'test_result.html',
@@ -1164,7 +1411,6 @@ def take_test(test_id):
     return render_template('take_test.html', test=test, previous_result=latest_result)
 
 
-# ================= TẠO BÀI THI MỚI =================
 @app.route("/courses/<int:course_id>/tests/add", methods=["GET", "POST"])
 def add_test(course_id):
     course = dao.get_course_by_id(course_id)
@@ -1185,18 +1431,16 @@ def add_test(course_id):
         if not chapter_id:
             return render_template("create_test.html", course=course, chapters=chapters, err_msg="Vui lòng chọn chương cho bài thi!")
 
-        # Kiểm tra xem chương này đã có bài thi nào đang is_active=True chưa
         active_test = Test.query.filter_by(chapter_id=chapter_id, is_active=True).first()
         if active_test:
             return render_template(
-                "create_test.html", 
-                course=course, 
-                chapters=chapters, 
+                "create_test.html",
+                course=course,
+                chapters=chapters,
                 err_msg=f"Chương '{active_test.chapter.name}' hiện đã có bài thi đang hoạt động ('{active_test.name}'). Vui lòng xóa bài thi cũ trước hoặc chọn chương khác!"
             )
 
         try:
-            # Tạo bài thi mới với is_active=True
             new_test = Test(
                 name=test_name.strip(),
                 description=description.strip() if description else None,
@@ -1240,22 +1484,19 @@ def add_test(course_id):
     return render_template("create_test.html", course=course, chapters=chapters)
 
 
-# ================= XÓA MỀM BÀI THI (IS_ACTIVE = FALSE) =================
 @app.route('/tests/<int:test_id>/delete', methods=['POST'])
 def delete_test(test_id):
     test = Test.query.get(test_id)
     if not test:
         flash("Bài thi không tồn tại!", "error")
         return redirect('/')
-    
+
     course_id = test.chapter.course_id
     if not current_user.is_authenticated or not dao.is_course_owner(current_user, test.chapter.course):
         flash("Bạn không có quyền xóa bài thi này!", "error")
         return redirect(f"/courses/{course_id}")
 
     try:
-        # XÓA MỀM: Chuyển is_active về False
-        # Giữ nguyên toàn bộ lịch sử điểm số của học viên trong UserTest và CSDL
         test.is_active = False
         db.session.commit()
         flash("Đã xóa bài thi thành công (đưa vào trạng thái ngưng hoạt động)!", "success")
@@ -1268,7 +1509,6 @@ def delete_test(test_id):
     return redirect(f"/courses/{course_id}")
 
 
-# ================= NHÂN BẢN BÀI THI (CLONE) =================
 @app.route('/tests/<int:test_id>/clone', methods=['GET', 'POST'])
 def clone_test(test_id):
     source_test = Test.query.get(test_id)
@@ -1293,14 +1533,13 @@ def clone_test(test_id):
         if not target_chapter_id:
             return render_template("create_test.html", course=course, chapters=chapters, source_test=source_test, err_msg="Vui lòng chọn chương cho bài thi clone!")
 
-        # Kiểm tra chương đích đã có bài thi đang is_active=True chưa
         active_test = Test.query.filter_by(chapter_id=target_chapter_id, is_active=True).first()
         if active_test:
             return render_template(
-                "create_test.html", 
-                course=course, 
-                chapters=chapters, 
-                source_test=source_test, 
+                "create_test.html",
+                course=course,
+                chapters=chapters,
+                source_test=source_test,
                 err_msg=f"Chương '{active_test.chapter.name}' đã có bài thi đang hoạt động ('{active_test.name}'). Vui lòng xóa bài thi của chương đó trước hoặc chọn chương khác!"
             )
 
@@ -1347,7 +1586,9 @@ def clone_test(test_id):
 
     return render_template("create_test.html", course=course, chapters=chapters, source_test=source_test)
 
-# cap chung chi
+
+# ---------------- CẤP CHỨNG CHỈ ----------------
+
 @app.route('/my_certificates')
 @login_required
 def my_certificates():
@@ -1363,7 +1604,6 @@ def view_certificate(cert_code):
         flash("Chứng chỉ không tồn tại hoặc đã bị thu hồi!", "error")
         return redirect('/')
 
-    # Cho phép học viên sở hữu hoặc giảng viên phụ trách xem chứng chỉ
     is_owner = dao.is_course_owner(current_user, cert.course)
     if cert.user_id != current_user.id and not is_owner:
         flash("Bạn không có quyền truy cập chứng chỉ này!", "error")
@@ -1371,7 +1611,9 @@ def view_certificate(cert_code):
 
     return render_template('certificate_view.html', cert=cert)
 
-# Thong ke cho giang vien
+
+# ---------------- THỐNG KÊ GIẢNG VIÊN ----------------
+
 @app.route('/teacher/dashboard')
 @login_required
 def teacher_dashboard():
@@ -1389,6 +1631,7 @@ def teacher_dashboard():
         courses=courses,
         chart_data=chart_data
     )
-    
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)

@@ -19,10 +19,11 @@ from werkzeug.security import generate_password_hash
 
 from __init__ import app, db
 from models import (
-    UserRole, Level, PaymentMethod,
+    UserRole, Level, PaymentMethod, SenderType,
     User, Category, Tag, Course, Rating, CourseTag, Chapter, Lesson,
     Test, Question, Choice, UserTest, ChatRoom, ChatRoomMessage,
     Enrollment, PaymentHistory,
+    AIChatRoom, AIChatRoomMessage, CourseRecommendation,
 )
 
 
@@ -351,6 +352,63 @@ def seed():
         db.session.add_all(payments)
         db.session.commit()
 
+        # ================= AI CHAT ROOM =================
+        # Mỗi phần tử: (student, tiêu đề đoạn chat)
+        ai_chat_rooms = [
+            AIChatRoom(user_id=students[0].id, title="Gợi ý khóa học lập trình Python"),
+            AIChatRoom(user_id=students[0].id, title="Lộ trình học Machine Learning từ đầu"),
+            AIChatRoom(user_id=students[1].id, title="Nên chọn khóa nào cho trình độ Junior?"),
+            AIChatRoom(user_id=students[2].id, title="So sánh khóa Thiết kế UI/UX và Frontend"),
+        ]
+        db.session.add_all(ai_chat_rooms)
+        db.session.commit()
+
+        # ================= AI CHAT ROOM MESSAGE =================
+        # Mỗi phần tử: (room, người gửi (USER/AI), nội dung, user_id nếu là USER)
+        ai_chat_message_data = [
+            (ai_chat_rooms[0], SenderType.USER, "Mình chưa biết lập trình, nên bắt đầu từ khóa học nào?", students[0].id),
+            (ai_chat_rooms[0], SenderType.AI,
+             "Với người mới bắt đầu, mình gợi ý khóa Lập trình Python cơ bản — đi từ cú pháp cơ bản đến làm dự án nhỏ, phù hợp làm nền tảng.", None),
+            (ai_chat_rooms[1], SenderType.USER, "Mình biết Python cơ bản rồi, giờ muốn học Machine Learning thì nên học gì tiếp?", students[0].id),
+            (ai_chat_rooms[1], SenderType.AI,
+             "Bạn có thể học tiếp khóa Machine Learning cơ bản — tập trung vào các thuật toán học máy phổ biến và thực hành.", None),
+            (ai_chat_rooms[2], SenderType.USER, "Mình ở trình độ Junior, nên học khóa nào để lên trình độ tiếp theo?", students[1].id),
+            (ai_chat_rooms[2], SenderType.AI,
+             "Ở trình độ Junior, nên ưu tiên các khóa thực hành nhiều dự án. Bạn muốn theo hướng frontend, backend hay dữ liệu?", None),
+            (ai_chat_rooms[3], SenderType.USER, "Khóa ReactJS và khóa thiết kế CSDL khác nhau thế nào? Mình nên học cái nào trước?", students[2].id),
+            (ai_chat_rooms[3], SenderType.AI,
+             "ReactJS tập trung xây dựng giao diện người dùng, còn thiết kế CSDL tập trung vào việc tổ chức dữ liệu ở backend. Nếu bạn mới bắt đầu, học CSDL trước sẽ giúp hiểu rõ luồng dữ liệu trước khi code giao diện.", None),
+        ]
+
+        ai_chat_messages = []
+        for room, sender_type, content, user_id in ai_chat_message_data:
+            ai_chat_messages.append(
+                AIChatRoomMessage(
+                    ai_chat_room_id=room.id,
+                    user_id=user_id,
+                    sender_type=sender_type,
+                    content=content,
+                )
+            )
+        db.session.add_all(ai_chat_messages)
+        db.session.commit()
+
+        # ================= COURSE RECOMMENDATION =================
+        # Gắn khóa học được AI gợi ý vào đúng tin nhắn AI tương ứng ở trên.
+        # ai_chat_messages[1] = câu trả lời AI trong ai_chat_rooms[0] -> gợi ý khóa Python cơ bản (courses[0])
+        # ai_chat_messages[3] = câu trả lời AI trong ai_chat_rooms[1] -> gợi ý khóa Machine Learning (courses[5])
+        # ai_chat_messages[6] = câu trả lời AI trong ai_chat_rooms[3] -> gợi ý khóa Thiết kế CSDL (courses[6])
+        course_recommendations = [
+            CourseRecommendation(user_id=students[0].id, course_id=courses[0].id,
+                                  ai_chat_room_message_id=ai_chat_messages[1].id),
+            CourseRecommendation(user_id=students[0].id, course_id=courses[5].id,
+                                  ai_chat_room_message_id=ai_chat_messages[3].id),
+            CourseRecommendation(user_id=students[2].id, course_id=courses[6].id,
+                                  ai_chat_room_message_id=ai_chat_messages[6].id),
+        ]
+        db.session.add_all(course_recommendations)
+        db.session.commit()
+
         print("Seed dữ liệu mẫu thành công!")
         print(f"- {len(users)} users")
         print(f"- {len(categories)} categories")
@@ -366,6 +424,8 @@ def seed():
         print(f"- {len(chat_rooms)} chat_rooms / {len(chat_messages)} chat_messages")
         print(f"- {len(enrollments)} enrollments")
         print(f"- {len(payments)} payment_history")
+        print(f"- {len(ai_chat_rooms)} ai_chat_rooms / {len(ai_chat_messages)} ai_chat_room_messages")
+        print(f"- {len(course_recommendations)} course_recommendations")
 
 
 if __name__ == "__main__":
