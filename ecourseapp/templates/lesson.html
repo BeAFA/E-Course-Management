@@ -1,73 +1,92 @@
 {% extends 'layout/base.html' %}
 
-{% block css %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
-{% endblock %}
-
 {% block content %}
-<section class="course-banner">
-    <h1 class="course-title">Danh sách bài học</h1>
-    <div class="progress-box">
-        <span>Tiến độ hoàn thành:</span>
-        <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill" style="width: {{ progress | default('35') }}%;"></div>
-        </div>
-        <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
-    </div>
-</section>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/create_test.css">
 
-<main class="main-container">
-    <section class="course-intro-section">
-        <div class="intro-right">
-            <button type="button" class="btn-ask-teacher" id="btnAskTeacher">
-                <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
-            </button>
-        </div>
-        <a href="{{ url_for('create_or_update_lesson', chapter_id=chapter_id) }}" class="btn-custom">
-            <i class="fa-solid fa-plus"></i> Tạo bài học mới
-        </a>
-    </section>
-
-    <div class="course-modules">
-        <div class="module-card">
-            <div class="module-header" data-toggle="accordion">
-                <span class="module-title">
-                    <i class="fa-solid fa-book-open"></i> Bài học
-                </span>
-                <i class="fa-solid fa-caret-down module-toggle-icon"></i>
+<div class="create-test-wrapper">
+    <!-- Header thông tin chương -->
+    <div class="test-header flex-space-between">
+        <div>
+            <h2><i class="fa-solid fa-book-open"></i> {{ chapter.name }}</h2>
+            <div class="test-header-sub">
+                Khóa học: <a href="/courses/{{ chapter.course_id }}" style="color: #fff; text-decoration: underline;">{{ chapter.course.name }}</a>
+                {% if chapter.description %} | {{ chapter.description }}{% endif %}
             </div>
-            <div class="module-body">
-                {% if chapter and chapter.lessons %}
-                    {% for lesson in chapter.lessons %}
-                    <div class="lesson-item">
-                        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
-                            {{ loop.index }}. {{ lesson.title }}
+        </div>
+        <div class="d-flex gap-2">
+            {% if is_owner %}
+            <a href="/chapters/{{ chapter.id }}/lessons/add" class="btn-main-action btn-save-test" style="text-decoration: none;">
+                <i class="fa-solid fa-plus"></i> Tạo bài học mới
+            </a>
+            {% endif %}
+            <a href="/courses/{{ chapter.course_id }}" class="btn-main-action btn-add-q" style="text-decoration: none; background: rgba(255, 255, 255, 0.2);">
+                <i class="fa-solid fa-arrow-left"></i> Về khóa học
+            </a>
+        </div>
+    </div>
+
+    <!-- Danh sách bài giảng đang hoạt động -->
+    {% if lessons and lessons|length > 0 %}
+        <div class="row">
+            {% for lesson in lessons %}
+            <div class="test-card mb-3">
+                <div class="block-title">
+                    <div>
+                        <a href="/lessons/{{ lesson.id }}/detail" class="fs-5 fw-bold text-primary text-decoration-none">
+                            <i class="fa-regular fa-circle-play me-2"></i> Bài {{ loop.index }}: {{ lesson.title }}
                         </a>
-                        <span class="status-badge video">Bài học</span>
                     </div>
-                    {% endfor %}
-                {% elif lessons %}
-                    {% for lesson in lessons %}
-                    <div class="lesson-item">
-                        <a href="{{ url_for('lesson_detail', lesson_id=lesson.id) }}" class="lesson-link" data-type="doc" data-title="{{ lesson.title }}">
-                            {{ loop.index }}. {{ lesson.title }}
+                    
+                    {% if is_owner %}
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Sửa bài học -->
+                        <a href="/lessons/{{ lesson.id }}/update" class="btn btn-sm btn-outline-primary" style="font-size: 13px;">
+                            <i class="fa-solid fa-pen"></i> Sửa
                         </a>
-                        <span class="status-badge video">Bài học</span>
+                        <!-- Xóa mềm bài học -->
+                        <form action="/lessons/{{ lesson.id }}/delete" method="POST" style="display: inline; margin: 0;" onsubmit="return confirm('Bạn có chắc muốn xóa mềm bài học này? Bài học sẽ ngưng hiển thị nhưng vẫn lưu trong cơ sở dữ liệu.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size: 13px;">
+                                <i class="fa-solid fa-trash-can"></i> Xóa
+                            </button>
+                        </form>
                     </div>
-                    {% endfor %}
-                {% else %}
-                <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-                    Hiện chưa có bài giảng được đăng lên
+                    {% endif %}
                 </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</main>
-{% endblock %}
 
-{% block js %}
-<script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
+                <div class="text-muted" style="font-size: 14px;">
+                    {% if lesson.article %}
+                        {{ lesson.article | striptags | truncate(150) }}
+                    {% else %}
+                        <em>Chưa có bài viết lý thuyết.</em>
+                    {% endif %}
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    {% if lesson.video_drive_id %}
+                    <span class="badge bg-danger p-2"><i class="fa-solid fa-video me-1"></i> Có Video bài giảng</span>
+                    {% endif %}
+                    {% if lesson.file_drive_id %}
+                    <span class="badge bg-secondary p-2"><i class="fa-solid fa-file-pdf me-1"></i> Tài liệu PDF</span>
+                    {% endif %}
+                    <a href="/lessons/{{ lesson.id }}/detail" class="btn btn-sm btn-link ms-auto text-decoration-none">
+                        Vào học ngay <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="test-card text-center py-5" style="text-align: center !important;">
+            <div class="mb-3"><i class="fa-regular fa-folder-open text-muted" style="font-size: 48px;"></i></div>
+            <h4 class="text-muted">Chương này chưa có bài học nào!</h4>
+            {% if is_owner %}
+            <p class="text-secondary">Hãy đăng video hoặc tài liệu đầu tiên cho chương này.</p>
+            <a href="/chapters/{{ chapter.id }}/lessons/add" class="btn-main-action btn-add-q mt-2" style="text-decoration: none;">
+                <i class="fa-solid fa-plus"></i> Thêm bài học mới
+            </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
 {% endblock %}

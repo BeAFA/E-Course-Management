@@ -1,62 +1,126 @@
 {% extends 'layout/base.html' %}
+
 {% block css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lesson_detail.css') }}">
 {% endblock %}
+
 {% block content %}
+<div class="lesson-view-container">
+    <!-- 1. Thanh Tiêu Đề & Điều Hướng -->
+    <div class="lesson-header-card">
+        <div class="header-left-meta">
+            <div class="breadcrumb-trail">
+                <a href="{{ url_for('course_detail', course_id=course.id) }}">
+                    <i class="fa-solid fa-graduation-cap"></i> {{ course.name }}
+                </a>
+                <span class="sep">/</span>
+                <a href="{{ url_for('lessons', chapter_id=chapter.id) }}">
+                    <i class="fa-regular fa-folder-open"></i> {{ chapter.name }}
+                </a>
+            </div>
+            <h1 class="lesson-main-title">{{ lesson.title }}</h1>
+        </div>
 
-<section class="course-banner">
-    <h1 class="course-title">{{ lesson.title if lesson else 'Chi tiết bài học' }}</h1>
-    <a href="{{ url_for('create_or_update_lesson', lesson_id=lesson.id) }}" class="btn-custom">
-        <i class="fa-solid fa-pen"></i> Sửa bài giảng
-    </a>
-</section>
+        <div class="header-right-actions">
+            {% if is_owner %}
+            <a href="{{ url_for('create_or_update_lesson', lesson_id=lesson.id) }}" class="btn-action-pill btn-edit-lesson">
+                <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa bài giảng
+            </a>
+            {% endif %}
+            <a href="{{ url_for('lessons', chapter_id=chapter.id) }}" class="btn-action-pill btn-back-chapter">
+                <i class="fa-solid fa-arrow-left"></i> Về danh sách bài
+            </a>
+        </div>
+    </div>
 
-<main class="lesson-detail-container">
-    {% if lesson %}
-    <div class="lesson-detail-card">
-        {% if lesson.video_drive_id %}
-        <div class="video-wrapper">
-            <video id="lessonVideo" controls src="/media/video/{{ lesson.video_drive_id }}">
-                Trình duyệt của bạn không hỗ trợ video.
+    <!-- 2. Khối Hình Ảnh Minh Họa / Ảnh Bìa (Nếu có) -->
+    {% if lesson.img_url %}
+    <section class="lesson-section-card image-showcase-card">
+        <div class="lesson-banner-img-wrap">
+            <img src="{{ lesson.img_url }}" alt="{{ lesson.title }}" class="lesson-banner-img">
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 3. Video Bài Giảng -->
+    {% if lesson.video_drive_id %}
+    <section class="lesson-section-card video-card">
+        <div class="section-badge-title">
+            <i class="fa-solid fa-circle-play text-danger"></i> Video bài giảng trực tuyến
+        </div>
+        <div class="video-player-frame">
+            <video controls preload="metadata" class="main-video-player" poster="{{ lesson.img_url if lesson.img_url else '' }}">
+                <source src="{{ url_for('stream_video', file_id=lesson.video_drive_id) }}" type="video/mp4">
+                Trình duyệt của bạn không hỗ trợ phát trực tiếp video này.
             </video>
         </div>
-        {% endif %}
-
-        {% if lesson.article %}
-        <div class="article-content">
-            {{ lesson.article | safe }}
-        </div>
-        {% endif %}
-
-        {% if not lesson.video_drive_id and not lesson.article %}
-        <div class="lesson-empty-state">
-            Bài học này chưa có nội dung video hoặc bài viết.
-        </div>
-        {% endif %}
-
-        <!--    {% if lesson.file_url %}-->
-        <!--    <div class="lesson-file">-->
-        <!--        <a href="https://drive.google.com/uc?export=download&id={{ lesson.file_drive_id }}"-->
-        <!--           target="_blank" class="btn-custom">-->
-        <!--            📄 Tải tài liệu bài học-->
-        <!--        </a>-->
-        <!--    </div>-->
-        <!--    {% endif %}-->
-    </div>
-    {% else %}
-    <div class="lesson-empty-state">
-        Chưa có nội dung
-    </div>
+    </section>
     {% endif %}
-</main>
-{% endblock %}
-{% block js %}
-<script src="{{ url_for('static', filename='js/video_support.js') }}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        initVideoControls('lessonVideo');
-    });
-</script>
+
+    <!-- 4. Tài Liệu PDF Đính Kèm -->
+    {% if lesson.file_drive_id or lesson.file_url %}
+    <section class="lesson-section-card attachment-card">
+        <div class="attachment-box">
+            <div class="attachment-icon">
+                <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <div class="attachment-meta">
+                <div class="att-title">Tài liệu học tập đính kèm</div>
+                <div class="att-sub">Tài liệu bài giảng định dạng PDF</div>
+            </div>
+            <a href="{{ lesson.file_url or '#' }}" target="_blank" class="btn-download-att">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Xem / Tải tài liệu
+            </a>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 5. Nội Dung Bài Viết / Lý Thuyết -->
+    <section class="lesson-section-card article-card">
+        <div class="section-badge-title">
+            <i class="fa-solid fa-book-open-reader text-primary"></i> Lý thuyết & Hướng dẫn chi tiết
+        </div>
+        <div class="article-content-body">
+            {% if lesson.article and lesson.article.strip() != "" %}
+                {{ lesson.article | safe}}
+            {% else %}
+                <p class="text-muted fst-italic">Bài giảng này hiện chưa có nội dung bài viết lý thuyết.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- 6. Thanh Điều Hướng Bài Trước / Sau -->
+    <nav class="lesson-bottom-nav">
+        {% if prev_lesson %}
+        <a href="{{ url_for('lesson_detail', lesson_id=prev_lesson.id) }}" class="nav-lesson-btn prev-btn">
+            <i class="fa-solid fa-chevron-left"></i>
+            <div>
+                <span class="sub-label">BÀI TRƯỚC</span>
+                <div class="title-label">{{ prev_lesson.title }}</div>
+            </div>
+        </a>
+        {% else %}
+        <div class="nav-lesson-placeholder"></div>
+        {% endif %}
+
+        {% if next_lesson %}
+        <a href="{{ url_for('lesson_detail', lesson_id=next_lesson.id) }}" class="nav-lesson-btn next-btn">
+            <div>
+                <span class="sub-label">BÀI TIẾP THEO</span>
+                <div class="title-label">{{ next_lesson.title }}</div>
+            </div>
+            <i class="fa-solid fa-chevron-right"></i>
+        </a>
+        {% else %}
+        <a href="{{ url_for('course_detail', course_id=course.id) }}" class="nav-lesson-btn finish-btn">
+            <div>
+                <span class="sub-label">HOÀN THÀNH CHƯƠNG</span>
+                <div class="title-label">Quay lại khóa học</div>
+            </div>
+            <i class="fa-solid fa-circle-check"></i>
+        </a>
+        {% endif %}
+    </nav>
+</div>
 {% endblock %}

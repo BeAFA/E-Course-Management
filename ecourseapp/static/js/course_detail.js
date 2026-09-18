@@ -1,15 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Tự động cập nhật thanh tiến độ từ data-progress
+    // 1. Tự động cập nhật thanh tiến độ từ data-progress do Backend truyền xuống
     const progressFill = document.getElementById('courseProgressFill');
+    const progressText = document.getElementById('courseProgressText');
+
     if (progressFill) {
-        const progressVal = progressFill.getAttribute('data-progress') || '35';
+        let progressVal = progressFill.getAttribute('data-progress');
+        // Tránh giá trị undefined, ép kiểu an toàn
+        progressVal = (progressVal !== null && progressVal !== '') ? parseInt(progressVal, 10) : 0;
+        if (isNaN(progressVal)) progressVal = 0;
+
         progressFill.style.width = progressVal + '%';
+        if (progressText) {
+            progressText.textContent = progressVal + '%';
+        }
     }
 
     // 2. Xử lý đóng/mở Accordion (Bài giảng / Bài kiểm tra)
     const moduleHeaders = document.querySelectorAll('[data-toggle="accordion"]');
     moduleHeaders.forEach(header => {
-        header.addEventListener('click', () => {
+        header.addEventListener('click', (e) => {
+            // Không kích hoạt toggle khi người dùng bấm vào các nút link/button bên trong header
+            if (e.target.closest('a, button, form')) {
+                return;
+            }
+
             const card = header.closest('.module-card');
             if (card) {
                 card.classList.toggle('collapsed');
@@ -33,35 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. Hỏi đáp với giảng viên
-    const btnAskTeacher = document.getElementById('btnAskTeacher');
-    if (btnAskTeacher) {
-        btnAskTeacher.addEventListener('click', () => {
-            const question = prompt('Nhập câu hỏi của bạn gửi đến giảng viên:');
-            if (question && question.trim() !== '') {
-                alert('Câu hỏi của bạn đã được gửi tới giảng viên thành công!');
-            }
-        });
-    }
-
-    // 5. Trợ lý AI
+    // 4. Nút Trợ lý AI (Mở modal chat hoặc hành động tương ứng)
     const btnAiChat = document.getElementById('btnAiChat');
     if (btnAiChat) {
         btnAiChat.addEventListener('click', () => {
-            const aiQuery = prompt('AI Assistant: Bạn cần hỏi gì về khóa học này?');
+            const aiQuery = prompt('AI Assistant: Bạn cần giải đáp thắc mắc gì về khóa học này?');
             if (aiQuery && aiQuery.trim() !== '') {
-                alert(`AI đang xử lý câu hỏi: "${aiQuery}"...`);
-            }
-        });
-    }
-
-    // 6. Nút Đăng xuất
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-                window.location.href = '/logout';
+                alert(`Hệ thống đang xử lý câu hỏi: "${aiQuery}"...`);
             }
         });
     }

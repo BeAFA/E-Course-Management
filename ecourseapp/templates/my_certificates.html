@@ -1,0 +1,56 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/certificate.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cert-page-container">
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="fa-solid fa-award text-warning me-2"></i>Chứng chỉ của tôi</h2>
+            <div class="text-muted" style="font-size: 14px;">Danh sách chứng nhận hoàn thành xuất sắc các khóa học</div>
+        </div>
+        <a href="{{ url_for('my_enrolled_courses') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-graduation-cap me-1"></i> Khóa học của tôi
+        </a>
+    </div>
+
+    {% if certs and certs|length > 0 %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for cert in certs %}
+        <div class="col">
+            <div class="cert-grid-card">
+                <div class="cert-badge-ribbon">
+                    <i class="fa-solid fa-certificate"></i>
+                </div>
+                <h4 class="fw-bold fs-5 text-dark mb-2">{{ cert.course.name }}</h4>
+                <div class="text-muted small mb-1">
+                    <i class="fa-regular fa-calendar-check me-1"></i> Ngày cấp: {{ cert.created_date.strftime('%d/%m/%Y') }}
+                </div>
+                <div class="text-secondary small mb-3">
+                    <i class="fa-solid fa-barcode me-1"></i> Mã: <code>{{ cert.code }}</code>
+                </div>
+
+                <div class="mt-auto pt-3 border-top d-flex gap-2">
+                    <a href="{{ url_for('view_certificate', cert_code=cert.code) }}" class="btn btn-primary w-100 py-2 fw-semibold">
+                        <i class="fa-solid fa-eye me-1"></i> Xem Chứng Chỉ
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 border rounded-4 bg-light">
+        <i class="fa-solid fa-award text-muted mb-3" style="font-size: 48px;"></i>
+        <h4 class="text-muted">Bạn chưa có chứng chỉ nào!</h4>
+        <p class="text-secondary">Hãy hoàn thành 100% điểm tối đa ở tất cả bài kiểm tra của khóa học để nhận chứng chỉ.</p>
+        <a href="{{ url_for('my_enrolled_courses') }}" class="btn btn-primary px-4 py-2 mt-2">
+            Tiếp tục học tập
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

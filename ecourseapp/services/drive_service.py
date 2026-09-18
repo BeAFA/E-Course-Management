@@ -1,7 +1,10 @@
 import os
+import mimetypes
 import tempfile
+import traceback
 
 from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
@@ -38,20 +41,39 @@ credentials = Credentials(
     scopes=SCOPES,
 )
 
-drive_service = build("drive", "v3", credentials=credentials)
-
 FOLDER_ID = "1jwBv0BUqeq9MoQzpYp_10AfX2G96QN8V"
 
 
+def get_drive_service():
+    """Luôn làm mới token nếu đã hết hạn trước khi gọi API"""
+    if credentials.expired or not credentials.valid:
+        credentials.refresh(Request())
+    return build("drive", "v3", credentials=credentials)
+
+
 def upload_file(filepath, filename):
+    # Xác định đúng mimetype (video/mp4, image/jpeg, application/pdf...)
+    mime_type, _ = mimetypes.guess_type(filepath)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
     metadata = {
         "name": filename,
         "parents": [FOLDER_ID]
     }
+    
     try:
-        media = MediaFileUpload(filepath, resumable=True)
+        service = get_drive_service()
 
-        file = drive_service.files().create(
+        # chunksize 5MB giúp upload video lớn ổn định và không ngắt kết nối giữa chừng
+        media = MediaFileUpload(
+            filepath,
+            mimetype=mime_type,
+            resumable=True,
+            chunksize=5 * 1024 * 1024
+        )
+
+        file = service.files().create(
             body=metadata,
             media_body=media,
             fields="id"
@@ -60,26 +82,31 @@ def upload_file(filepath, filename):
         file_id = file["id"]
         public_file(file_id)
         url = get_preview_url(file_id)
+        return file_id, url
 
     except HttpError as e:
-        print("Drive upload error:", e)
+        print("[Drive HTTP Error]:", e.content.decode("utf-8") if hasattr(e, "content") else e)
+        traceback.print_exc()
         return None, None
     except Exception as e:
-        print("Unexpected upload error:", e)
+        print("[Unexpected upload error]:", e)
+        traceback.print_exc()
         return None, None
-
-    return file_id, url
 
 
 def public_file(file_id):
-    permission = {
-        "type": "anyone",
-        "role": "reader"
-    }
-    drive_service.permissions().create(
-        fileId=file_id,
-        body=permission
-    ).execute()
+    try:
+        service = get_drive_service()
+        permission = {
+            "type": "anyone",
+            "role": "reader"
+        }
+        service.permissions().create(
+            fileId=file_id,
+            body=permission
+        ).execute()
+    except Exception as e:
+        print(f"Cảnh báo khi public file {file_id}:", e)
 
 
 def get_preview_url(file_id):
@@ -87,24 +114,16 @@ def get_preview_url(file_id):
 
 
 def delete_file(file_id):
-    drive_service.files().delete(
-        fileId=file_id
-    ).execute()
+    try:
+        service = get_drive_service()
+        service.files().delete(fileId=file_id).execute()
+    except HttpError as e:
+        print(f"Không thể xóa file {file_id} trên Drive:", e)
+
 
 def replace_drive_file(obj, drive_id_field, url_field, file_storage, filename=None):
-    """
-    Thay thế file (ảnh/video/...) cũ trên Drive bằng file mới cho 1 object bất kỳ.
-
-    obj: đối tượng model (vd: Lesson, User, Course...) đã có 2 field
-         <drive_id_field> và <url_field>
-    drive_id_field: tên field lưu file_id trên Drive (vd: "video_drive_id")
-    url_field: tên field lưu url preview (vd: "video_url")
-    file_storage: file upload từ request (werkzeug FileStorage, vd request.files['video'])
-    filename: tên file muốn lưu trên Drive (mặc định lấy tên gốc)
-    """
     old_file_id = getattr(obj, drive_id_field, None)
 
-    # Lưu file tạm ra ổ đĩa vì MediaFileUpload cần path
     filename = filename or file_storage.filename
     suffix = os.path.splitext(filename)[1]
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -114,17 +133,13 @@ def replace_drive_file(obj, drive_id_field, url_field, file_storage, filename=No
     try:
         new_file_id, new_url = upload_file(tmp_path, filename)
         if new_file_id is None:
-            # upload thất bại -> không đụng gì tới file cũ, giữ nguyên object
             return obj
     finally:
-        os.remove(tmp_path)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
-    # Upload mới thành công thì mới xóa file cũ (tránh mất dữ liệu nếu upload lỗi)
     if old_file_id:
-        try:
-            delete_file(old_file_id)
-        except HttpError as e:
-            print("Không xóa được file cũ trên Drive:", e)
+        delete_file(old_file_id)
 
     setattr(obj, drive_id_field, new_file_id)
     setattr(obj, url_field, new_url)

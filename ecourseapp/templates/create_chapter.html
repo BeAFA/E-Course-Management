@@ -1,44 +1,52 @@
-{%extends 'layout/base.html'%}
-{% block css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
-{% endblock %}
-{%block content%}
-<main class="create-form-container">
-    <div class="form-card">
-        <div class="form-header">
-            <h1>{{ 'Sửa chương' if chapter else 'Tạo chương mới' }}</h1>
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/create_test.css">
+
+<div class="create-test-wrapper" style="max-width: 650px;">
+    <div class="test-header flex-space-between">
+        <div>
+            <h2>
+                <i class="fa-solid fa-folder-plus"></i> 
+                {% if chapter %}Chỉnh Sửa Chương Học{% else %}Tạo Chương Học Mới{% endif %}
+            </h2>
+            <div class="test-header-sub">Khóa học: {{ course.name }}</div>
         </div>
-
-        {% if err_msg %}
-        <div class="alert-error">
-            {{ err_msg }}
-        </div>
-        {% endif %}
-
-        <form method="POST"
-              action="{{ url_for('update_chapters', course_id=course_id, chapter_id=chapter.id) if chapter else url_for('add_chapters', course_id=course_id) }}"
-              class="form">
-            <div class="form-group">
-                <label for="name">Tiêu đề<span class="required">*</span></label>
-                <input type="text" id="name" name="name" placeholder="Ví dụ: Chương 1: Giới thiệu..."
-                       value="{{ chapter.name if chapter else '' }}">
-            </div>
-
-            <div class="form-group">
-                <label for="description">Miêu tả</label>
-                <input type="text" id="description" name="description"
-                       placeholder="Miêu tả tổng quát chương"
-                       value="{{ chapter.description if chapter else '' }}">
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-submit">
-                    {{ 'Lưu thay đổi' if chapter else 'Tạo chương mới' }}
-                </button>
-                <a href="{{url_for('course_detail', course_id=course_id)}}" class="btn-cancel">Hủy</a>
-            </div>
-
-        </form>
+        <a href="/courses/{{ course.id }}" class="btn-main-action btn-add-q" style="text-decoration: none; background: rgba(255, 255, 255, 0.2);">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại
+        </a>
     </div>
-</main>
-{%endblock%}
+
+    {% if err_msg %}
+        <div class="alert-error-box">{{ err_msg }}</div>
+    {% endif %}
+
+    <form method="POST" action="">
+        <div class="test-card">
+            <div class="block-title">
+                <span><i class="fa-solid fa-circle-info text-primary"></i> Thông tin chương</span>
+            </div>
+
+            <div class="form-group-custom">
+                <label class="form-label-custom">Tên chương (*)</label>
+                <input type="text" name="name" class="form-control-custom" 
+                       value="{% if chapter %}{{ chapter.name }}{% endif %}" 
+                       placeholder="Ví dụ: Chương 1: Cú pháp cơ bản" required>
+            </div>
+
+            <div class="form-group-custom">
+                <label class="form-label-custom">Mô tả ngắn gọn về chương</label>
+                <textarea name="description" class="form-control-custom" rows="3" placeholder="Nhập tóm tắt kiến thức trong chương...">{% if chapter %}{{ chapter.description or '' }}{% endif %}</textarea>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="/courses/{{ course.id }}" class="btn btn-outline-secondary px-4 py-2">Hủy</a>
+                <button type="submit" class="btn-main-action btn-save-test px-4 py-2">
+                    <i class="fa-solid fa-floppy-disk"></i> {% if chapter %}Cập Nhật Chương{% else %}Lưu Chương Mới{% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
