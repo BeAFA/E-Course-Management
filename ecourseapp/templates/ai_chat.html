@@ -1,13 +1,13 @@
-{%extends 'layout/base.html'%}
+{% extends 'layout/base.html' %}
+{% block body_class %}ai-chat-page{% endblock %}
 {% block css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ai_chat.css') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 {% endblock %}
-{%block content%}
 
-
+{% block full_content %}
 <div class="app">
   <!-- ===== Sidebar: lịch sử trò chuyện ===== -->
   <aside class="sidebar" id="sidebar" aria-label="Lịch sử trò chuyện">
@@ -35,14 +35,6 @@
         <button class="history-item" data-id="h3">Nên chọn khóa nào cho trình độ Junior?</button>
         <button class="history-item" data-id="h4">So sánh khóa Thiết kế UI/UX và Frontend</button>
         <button class="history-item" data-id="h5">Ôn tập trước bài kiểm tra chương 3</button>
-      </div>
-    </div>
-
-    <div class="sidebar-foot">
-      <div class="avatar">NA</div>
-      <div>
-        <p class="user-name">Nguyễn Anh</p>
-        <p class="user-role">Học viên</p>
       </div>
     </div>
   </aside>
@@ -80,7 +72,7 @@
           </button>
 
           <div class="input-bar">
-            <textarea id="textInput" rows="1" placeholder="Nhắn tin cho EduPath AI..."></textarea>
+            <textarea id="textInput" rows="1" maxlength="500" placeholder="Nhắn tin cho EduPath AI..."></textarea>
             <button class="send-btn" id="sendBtn" disabled aria-label="Gửi tin nhắn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
             </button>
@@ -106,6 +98,7 @@
   </main>
 </div>
 {% endblock %}
+{% block footer %}{% endblock %}
 {% block js %}
 <script src="{{ url_for('static', filename='js/ai_chat.js') }}"></script>
 {% endblock %}

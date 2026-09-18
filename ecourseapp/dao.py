@@ -1,8 +1,5 @@
-import json
-
-import requests
 from werkzeug.security import check_password_hash
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from datetime import datetime, timedelta
 from __init__ import db
 import models
@@ -19,7 +16,7 @@ def get_user_by_id(user_id):
     return models.User.query.get(user_id)
 
 
-def get_courses(kw=None, category_id=None):
+def get_courses(kw=None, category_id=None, rating_min=None, price_sort=None, course_ids=None):
     query = db.session.query(
         models.Course,
         func.coalesce(func.avg(models.Rating.rating), 0).label('avg_rating'),
@@ -29,20 +26,65 @@ def get_courses(kw=None, category_id=None):
     ).filter(models.Course.is_active == True)
 
     if kw:
-        query = query.filter(models.Course.name.icontains(kw))
+        query = query.outerjoin(models.User, models.Course.teacher_id == models.User.id)
+        query = query.filter(or_(
+            models.Course.name.icontains(kw),
+            models.User.name.icontains(kw)
+        ))
+
     if category_id:
         query = query.filter(models.Course.category_id == category_id)
 
+    if course_ids is not None:
+        query = query.filter(models.Course.id.in_(course_ids))
+
     query = query.group_by(models.Course.id)
+
+    if rating_min:
+        query = query.having(func.coalesce(func.avg(models.Rating.rating), 0) >= float(rating_min))
+
+    if price_sort == 'asc':
+        query = query.order_by(models.Course.price.asc())
+    elif price_sort == 'desc':
+        query = query.order_by(models.Course.price.desc())
+    else:
+        query = query.order_by(models.Course.id.desc())
 
     results = query.all()
     courses = []
     for course, avg_rating, rating_count in results:
-        # Gắn tạm 2 thuộc tính không persist vào object Course
         course.avg_rating = round(float(avg_rating), 1)
         course.rating_count = rating_count
         courses.append(course)
+
     return courses
+
+
+def dismiss_recommended_courses(user_id, course_ids):
+    """Xóa mềm: set is_active=False cho mọi CourseRecommendation của user
+    trùng course_id trong danh sách, bất kể thuộc tin nhắn/phòng chat nào."""
+    models.CourseRecommendation.query.filter(
+        models.CourseRecommendation.user_id == user_id,
+        models.CourseRecommendation.course_id.in_(course_ids)
+    ).update({models.CourseRecommendation.is_active: False}, synchronize_session=False)
+    db.session.commit()
+
+def get_recommended_course_ids_for_user(user_id, limit=30):
+    rows = (
+        db.session.query(
+            models.CourseRecommendation.course_id,
+            func.max(models.CourseRecommendation.created_date).label('last_recommended')
+        )
+        .filter(
+            models.CourseRecommendation.user_id == user_id,
+            models.CourseRecommendation.is_active == True
+        )
+        .group_by(models.CourseRecommendation.course_id)
+        .order_by(func.max(models.CourseRecommendation.created_date).desc())
+        .limit(limit)
+        .all()
+    )
+    return [r.course_id for r in rows]
 
 
 def get_my_courses(teacher_id):
@@ -104,6 +146,19 @@ def update_course(course, name, price, category_id, description, img_drive_id, i
 
     return course
 
+def get_recommended_courses_for_user(user_id, limit=20):
+    """Lấy danh sách khóa học đã từng được AI gợi ý cho user này,
+    không trùng lặp, ưu tiên gợi ý gần nhất."""
+    rows = (
+        db.session.query(models.Course, func.max(models.CourseRecommendation.created_date).label('last_recommended'))
+        .join(models.CourseRecommendation, models.CourseRecommendation.course_id == models.Course.id)
+        .filter(models.CourseRecommendation.user_id == user_id)
+        .group_by(models.Course.id)
+        .order_by(func.max(models.CourseRecommendation.created_date).desc())
+        .limit(limit)
+        .all()
+    )
+    return [course for course, _ in rows]
 
 def get_course_rating_stats(course_id):
     result = db.session.query(
@@ -190,56 +245,6 @@ def is_lesson_owner(user, lesson):
     if not user or not lesson:
         return False
     return is_chapter_owner(user, lesson.chapter)
-
-def get_course_recommendation(user_message: str, chat_history: list):
-    # 1. Lấy danh sách course cần đưa cho AI (nên lọc trước nếu DB lớn)
-    courses = models.Course.query.filter_by(is_active=True).all()
-
-    # 2. Duyệt qua từng course, build context tối giản
-    course_contexts = [models.Course.to_ai_context(c) for c in courses]
-
-    # 3. Gọi API, đưa course_contexts vào system prompt dạng JSON string
-    system_prompt = f"""Bạn là trợ lý gợi ý khóa học.
-Dưới đây là danh sách khóa học hiện có (dạng JSON):
-{json.dumps(course_contexts, ensure_ascii=False)}
-
-Dựa vào nhu cầu của user, hãy chọn ra các khóa học phù hợp nhất.
-CHỈ trả lời bằng JSON theo format sau, không thêm text nào khác:
-{{"reply": "câu trả lời tự nhiên cho user", "recommended_course_ids": [id1, id2]}}
-Nếu không có khóa học nào phù hợp, trả recommended_course_ids là mảng rỗng []."""
-
-    response = requests.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={"Content-Type": "application/json"},
-        json={
-            "model": "claude-sonnet-4-6",
-            "max_tokens": 1000,
-            "system": system_prompt,
-            "messages": chat_history + [{"role": "user", "content": user_message}]
-        }
-    )
-
-    data = response.json()
-    raw_text = data["content"][0]["text"]
-
-    # 4. Parse JSON trả về (nhớ strip markdown fence nếu có)
-    clean = raw_text.replace("```json", "").replace("```", "").strip()
-    try:
-        result = json.loads(clean)
-    except json.JSONDecodeError:
-        result = {"reply": raw_text, "recommended_course_ids": []}
-
-    # 5. Query lại Course thật từ id AI trả về (không tin dữ liệu AI tự mô tả)
-    recommended_ids = result.get("recommended_course_ids", [])
-    recommended_courses = models.Course.query.filter(models.Course.id.in_(recommended_ids)).all()
-
-    return {
-        "reply": result.get("reply", ""),
-        "courses": [
-            {"id": c.id, "name": c.name, "price": c.price, "img_url": c.img_url}
-            for c in recommended_courses
-        ]
-    }
 
 def get_admin_dashboard_stats():
     commission_record = models.Commission.query.first()

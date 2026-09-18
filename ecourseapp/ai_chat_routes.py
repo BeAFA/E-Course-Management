@@ -40,7 +40,8 @@ def _build_courses_context():
 
 
 def _serialize_message(msg):
-    """Chuyển 1 bản ghi AIChatRoomMessage thành JSON cho frontend, kèm khóa học gợi ý (nếu có)."""
+    """Chuyển 1 bản ghi AIChatRoomMessage thành JSON cho frontend,
+    kèm khóa học gợi ý còn active (nếu có)."""
     courses = [
         {
             "id": rec.course.id,
@@ -50,6 +51,7 @@ def _serialize_message(msg):
             "icon": "📘",
         }
         for rec in msg.recommendations
+        if rec.is_active
     ]
     return {
         "role": "user" if msg.sender_type == SenderType.USER else "ai",

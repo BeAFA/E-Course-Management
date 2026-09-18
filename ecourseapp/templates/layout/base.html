@@ -5,22 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}E-Course{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}"/>
     {% block css %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
-{%block header%}
-{%include 'layout/header.html'%}
-{%endblock%}
+<body class="d-flex flex-column min-vh-100 {% block body_class %}{% endblock %}">
+{% block header %}
+{% include 'layout/header.html' %}
+{% endblock %}
+
+{% block full_content %}
 <div class="container flex-grow-1">
-
-    {%block content required%}
-
-
-    {%endblock%}
+    {% block content required %}
+    {% endblock %}
+    <a href="{{ url_for('ai_chat_page')}}" class="floating-btn">ChatAI</a>
 </div>
-{%block footer%}
-{%include 'layout/footer.html'%}
-{%endblock%}
+{% endblock %}
+
+
+{% block footer %}
+{% include 'layout/footer.html' %}
+{% endblock %}
 
 {% block js %}{% endblock %}
 </body>

@@ -11,7 +11,10 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:root@localhost/eco
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 app.config["SECRET_KEY"] = '8f3a4c1e7d9b2a6f8e4c3d1a9b7e5f6c8d0a1b2c3d4e5f60718293a4b5c6d7'
 
-AI_API_KEY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ecourseapp\\credentials", "ai_api_key.json")
+AI_API_KEY = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)),
+    "ecourseapp", "credentials", "ai_api_key.json"
+)
 with open(AI_API_KEY, "r", encoding="utf-8") as f:
     AI_CONFIG = json.load(f)
 GEMINI_API_KEY = AI_CONFIG['GEMINI_API_KEY']

@@ -6,6 +6,11 @@
                     width="20%" height="20%" alt="E-Course"> E-Course</a>
             <div class="collapse navbar-collapse flex-row-reverse" id="mynavbar">
                 {% if current_user.is_authenticated %}
+                <a href="{{ url_for('view_recommended_courses') }}" class="btn">
+                    <button class="btn btn-outline-light mr">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Gợi ý cho tôi
+                    </button>
+                </a>
                 <a href="{{ url_for('profile_my_user') }}" class="btn">
                     <button class="btn btn-outline-light">
                         Chào {{ current_user.name }}!

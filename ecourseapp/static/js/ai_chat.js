@@ -62,22 +62,34 @@
       var groups = groupByDate(rooms);
 
       function renderGroup(label, list) {
-        if (!list.length) return;
-        var wrap = document.createElement('div');
-        wrap.className = 'history-group';
-        var title = document.createElement('p');
-        title.className = 'history-group-label';
-        title.textContent = label;
-        wrap.appendChild(title);
-        list.forEach(function (r) {
-          var btn = document.createElement('button');
-          btn.className = 'history-item' + (r.id === currentRoomId ? ' active' : '');
-          btn.setAttribute('data-id', r.id);
-          btn.textContent = r.title;
-          wrap.appendChild(btn);
-        });
-        historyScroll.appendChild(wrap);
-      }
+          if (!list.length) return;
+          var wrap = document.createElement('div');
+          wrap.className = 'history-group';
+          var title = document.createElement('p');
+          title.className = 'history-group-label';
+          title.textContent = label;
+          wrap.appendChild(title);
+
+          list.forEach(function (r) {
+            var item = document.createElement('div');
+            item.className = 'history-item' + (r.id === currentRoomId ? ' active' : '');
+            item.setAttribute('data-id', r.id);
+
+            var titleBtn = document.createElement('button');
+            titleBtn.className = 'history-item-title';
+            titleBtn.textContent = r.title;
+            item.appendChild(titleBtn);
+
+            var delBtn = document.createElement('button');
+            delBtn.className = 'history-delete-btn';
+            delBtn.setAttribute('aria-label', 'Xóa đoạn chat');
+            delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>';
+            item.appendChild(delBtn);
+
+            wrap.appendChild(item);
+          });
+          historyScroll.appendChild(wrap);
+        }
 
       renderGroup('Hôm nay', groups.today);
       renderGroup('Cũ hơn', groups.older);
@@ -89,12 +101,37 @@
   // Click 1 đoạn chat cũ trong sidebar -> mở NGAY TRONG màn hình chat chính
   // (không phải màn hình chỉ-xem riêng) để có thể gửi tiếp tin nhắn.
   historyScroll.addEventListener('click', function (e) {
-    var item = e.target.closest('.history-item');
-    if (!item) return;
-    var roomId = parseInt(item.getAttribute('data-id'), 10);
-    openExistingChat(roomId);
-    closeSidebar();
-  });
+      var delBtn = e.target.closest('.history-delete-btn');
+      if (delBtn) {
+        e.stopPropagation();
+        var item = delBtn.closest('.history-item');
+        var roomId = parseInt(item.getAttribute('data-id'), 10);
+        deleteChat(roomId, item);
+        return;
+      }
+
+      var titleBtn = e.target.closest('.history-item-title');
+      if (!titleBtn) return;
+      var roomId = parseInt(titleBtn.closest('.history-item').getAttribute('data-id'), 10);
+      openExistingChat(roomId);
+      closeSidebar();
+    });
+
+    function deleteChat(roomId, itemNode) {
+      if (!confirm('Xóa đoạn chat này? Hành động không thể hoàn tác.')) return;
+
+      fetchJSON('/ai_chat/rooms/' + roomId, { method: 'DELETE' })
+        .then(function () {
+          itemNode.remove();
+          // Nếu đang mở đúng đoạn chat vừa xóa -> quay về trạng thái "đoạn chat mới"
+          if (roomId === currentRoomId) {
+            startNewChat();
+          }
+        })
+        .catch(function (err) {
+          alert('Không xóa được đoạn chat: ' + err.message);
+        });
+    }
 
   function openExistingChat(roomId) {
     fetchJSON('/ai_chat/rooms/' + roomId + '/messages').then(function (data) {
@@ -109,6 +146,39 @@
       alert('Không mở được đoạn chat: ' + err.message);
     });
   }
+
+  function buildMessageNode(m) {
+      var wrap = document.createElement('div');
+      wrap.className = 'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-ai');
+
+      var avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.textContent = m.role === 'user' ? 'Bạn' : 'AI';
+
+      var bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      var p = document.createElement('div');
+      p.textContent = m.text;
+      bubble.appendChild(p);
+
+      if (m.courses && m.courses.length) {
+        var cardsWrap = document.createElement('div');
+        cardsWrap.className = 'course-cards';
+        m.courses.forEach(function (c) { cardsWrap.appendChild(buildCourseCard(c)); });
+        bubble.appendChild(cardsWrap);
+
+        var viewAllBtn = document.createElement('a');
+        viewAllBtn.className = 'view-all-courses-btn';
+        var ids = m.courses.map(function (c) { return c.id; }).join(',');
+        viewAllBtn.href = '/courses?ids=' + encodeURIComponent(ids);
+        viewAllBtn.textContent = 'Xem tất cả ' + m.courses.length + ' khóa học';
+        bubble.appendChild(viewAllBtn);
+      }
+
+      wrap.appendChild(avatar);
+      wrap.appendChild(bubble);
+      return wrap;
+    }
 
   /* ---------- Soạn tin nhắn (auto-resize textarea) ---------- */
   var MAX_TEXTAREA_LINES = 5;

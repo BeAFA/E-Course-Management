@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 from flask_login import login_user, logout_user, current_user
@@ -34,6 +34,7 @@ DEFAULT_LESSON_IMG_DRIVE_ID = "1DaVBg8l_Ze_b6CB0-4ThfxmIxpxE-ojU"
 # Tạo link trực tiếp để hiển thị ảnh từ Google Drive
 DEFAULT_LESSON_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_LESSON_IMG_DRIVE_ID}"
 
+MAX_MESSAGE_LENGTH = 500
 
 @app.route('/')
 def home():
@@ -214,9 +215,72 @@ def update_password():
 
 @app.route('/courses')
 def get_all_courses():
-    courses = dao.get_courses()
-    return render_template("chapter.html", courses=courses)
+    kw = request.args.get('kw')
+    rating_min = request.args.get('rating')
+    price_sort = request.args.get('price_sort')
+    category_id = request.args.get('category_id')
+    ids_param = request.args.get('ids')
 
+    course_ids = None
+    if ids_param:
+        course_ids = [int(x) for x in ids_param.split(',') if x.strip().isdigit()]
+
+    categories = dao.get_categories()
+
+    courses = dao.get_courses(
+        kw=kw,
+        category_id=category_id,
+        rating_min=rating_min,
+        price_sort=price_sort,
+        course_ids=course_ids
+    )
+
+    return render_template(
+        "courses.html",
+        courses=courses,
+        categories=categories,
+        is_ai_recommendation=bool(ids_param),
+        no_ai_history=request.args.get('no_ai_history')
+    )
+
+
+@app.route('/courses/recommended')
+def view_recommended_courses():
+    """Xem lại TOÀN BỘ khóa học đã từng được AI gợi ý qua các lần chat,
+    không giới hạn ở 1 tin nhắn cụ thể."""
+    if not current_user.is_authenticated:
+        return redirect(url_for('login_my_user', next=request.url))
+
+    course_ids = dao.get_recommended_course_ids_for_user(current_user.id)
+    if not course_ids:
+        return redirect(url_for('get_all_courses', no_ai_history=1))
+
+    ids_str = ",".join(str(i) for i in course_ids)
+    return redirect(url_for('get_all_courses', ids=ids_str))
+
+@app.route('/courses/recommended/dismiss', methods=['POST'])
+def dismiss_recommended_courses():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    data = request.get_json(force=True)
+    raw_ids = data.get('course_ids', [])
+
+    try:
+        course_ids = [int(cid) for cid in raw_ids]
+    except (TypeError, ValueError):
+        return jsonify({"error": "Danh sách ID không hợp lệ"}), 400
+
+    if not course_ids:
+        return jsonify({"error": "Chưa chọn khóa học nào"}), 400
+
+    try:
+        dao.dismiss_recommended_courses(current_user.id, course_ids)
+        return jsonify({"success": True, "removed": course_ids})
+    except Exception as ex:
+        db.session.rollback()
+        print(ex)
+        return jsonify({"error": "Có lỗi xảy ra, vui lòng thử lại"}), 500
 
 @app.route('/courses/my_courses')
 def get_my_course():
@@ -774,7 +838,7 @@ def delete_ai_chat_room(room_id):
     if not room or room.user_id != current_user.id:
         return jsonify({"error": "Không tìm thấy cuộc trò chuyện"}), 404
 
-    db.session.delete(room)  # cascade="all, delete-orphan" sẽ tự xoá messages liên quan
+    db.session.delete(room)
     db.session.commit()
     return jsonify({"status": "ok"})
 
@@ -816,6 +880,10 @@ def send_ai_chat_message(room_id):
     user_message = (data or {}).get("message", "").strip()
     if not user_message:
         return jsonify({"error": "Tin nhắn rỗng"}), 400
+    if len(user_message) > MAX_MESSAGE_LENGTH:
+        return jsonify({
+            "error": f"Tin nhắn quá dài (tối đa {MAX_MESSAGE_LENGTH} ký tự)"
+        }), 400
 
     # 1) LƯU tin nhắn user vào DB trước
     user_msg = AIChatRoomMessage(
@@ -896,7 +964,7 @@ def send_ai_chat_message(room_id):
         room.title = user_message[:40] + ("..." if len(user_message) > 40 else "")
 
     # Đưa đoạn chat vừa nhắn lên đầu danh sách (cập nhật thời gian hoạt động gần nhất)
-    room.updated_date = datetime.utcnow()
+    room.updated_date = datetime.now(timezone.utc)
 
     db.session.commit()
 
@@ -916,6 +984,22 @@ def send_ai_chat_message(room_id):
         }
     )
 
+@app.route("/ai_chat/recommendations", methods=["GET"])
+def get_ai_recommendations():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Chưa đăng nhập"}), 401
+
+    courses = dao.get_recommended_courses_for_user(current_user.id)
+    return jsonify([
+        {
+            "id": c.id,
+            "name": c.name,
+            "category": c.category.name if c.category else "",
+            "price": c.price or 0,
+            "img_url": c.img_url,
+        }
+        for c in courses
+    ])
 
 if __name__ == '__main__':
     app.run(debug=True)
