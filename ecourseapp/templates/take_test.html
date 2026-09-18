@@ -1,0 +1,64 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/static/css/take_test.css">
+
+<div class="take-test-wrapper">
+    <div class="test-header-card">
+        <div>
+            <h2><i class="fa-solid fa-pen-clip"></i> {{ test.name }}</h2>
+            <div class="test-header-sub">{{ test.description or 'Bài kiểm tra trắc nghiệm kiến thức' }}</div>
+        </div>
+        <div class="score-badge">
+            Thang điểm: {{ test.total_score or 10 }}
+        </div>
+    </div>
+
+    {% if previous_result %}
+    <div class="history-alert">
+        <span><i class="fa-solid fa-clock-rotate-left me-2"></i>Điểm thi gần nhất của bạn: <strong>{{ previous_result.score }}</strong> / {{ test.total_score or 10 }}</span>
+        <span>Bạn có thể làm lại để cải thiện điểm số</span>
+    </div>
+    {% endif %}
+
+    {% if err_msg %}
+    <div class="alert alert-danger rounded-3 mb-4">{{ err_msg }}</div>
+    {% endif %}
+
+    <form method="POST" action="">
+        {% for q in test.questions %}
+        <div class="question-item-card">
+            <div class="question-title-bar">
+                <span class="question-pill">Câu {{ loop.index }}</span>
+                <span class="question-text">{{ q.content }}</span>
+            </div>
+
+            <div class="choices-list">
+                {% for c in q.choices %}
+                <label class="choice-option-row">
+                    <input type="radio" name="question_{{ q.id }}" value="{{ c.id }}" required>
+                    <span class="choice-text-label">{{ c.answer }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="question-item-card text-center py-4">
+            <p class="text-muted mb-0">Bài thi này hiện chưa có câu hỏi.</p>
+        </div>
+        {% endfor %}
+
+        {% if test.questions %}
+        <div class="action-footer">
+            <a href="/courses/{{ test.chapter.course_id }}" class="btn-back-link">
+                <i class="fa-solid fa-arrow-left"></i> Rời khỏi
+            </a>
+            <button type="submit" class="btn-submit-exam" onclick="return confirm('Bạn có chắc chắn muốn nộp bài thi?');">
+                <i class="fa-solid fa-paper-plane"></i> Nộp bài thi
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

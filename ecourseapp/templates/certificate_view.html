@@ -1,0 +1,48 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/certificate.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cert-view-wrapper">
+    <!-- Thanh công cụ điều hướng và In (ẩn khi bấm Print) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <a href="{{ url_for('my_certificates') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Về danh sách chứng chỉ
+        </a>
+        <button onclick="window.print()" class="btn btn-success btn-sm px-3">
+            <i class="fa-solid fa-print me-1"></i> In / Tải PDF Chứng Chỉ
+        </button>
+    </div>
+
+    <!-- Tờ chứng chỉ -->
+    <div class="cert-paper">
+        <div class="cert-title-top">CHỨNG CHỈ HOÀN THÀNH</div>
+        <div class="cert-subtitle">CERTIFICATE OF COMPLETION</div>
+
+        <div class="cert-statement">Chứng nhận học viên:</div>
+        <div class="cert-recipient-name">{{ cert.user.name }}</div>
+
+        <div class="cert-statement">
+            Đã hoàn thành xuất sắc tất cả các nội dung học tập và vượt qua toàn bộ bài kiểm tra với điểm số tuyệt đối của khóa học:
+        </div>
+
+        <div class="cert-course-name">" {{ cert.course.name }} "</div>
+
+        <div class="cert-footer-row">
+            <div class="cert-sign-col">
+                <div class="small text-muted mb-1">Mã xác thực: <strong>{{ cert.code }}</strong></div>
+                <div class="small text-muted">Ngày cấp: {{ cert.created_date.strftime('%d/%m/%Y') }}</div>
+            </div>
+
+            <div class="cert-sign-col">
+                <div style="font-family: 'Brush Script MT', cursive; font-size: 24px; color: #1e3a8a;">E-Course Academy</div>
+                <div class="cert-sign-line"></div>
+                <div class="fw-bold small text-dark">BAN ĐIỀU HÀNH E-COURSE</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

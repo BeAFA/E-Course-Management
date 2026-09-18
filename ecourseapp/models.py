@@ -172,10 +172,9 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    test = db.relationship(
+    tests = db.relationship(
         "Test",
         back_populates="chapter",
-        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -209,10 +208,10 @@ class Test(Base):
 
     name = db.Column(db.String(80), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False, unique=True)
+    chapter_id = db.Column(db.ForeignKey('chapter.id', ondelete='CASCADE'), nullable=False)
     total_score = db.Column(db.Float, nullable=True)
 
-    chapter = db.relationship("Chapter", back_populates="test")
+    chapter = db.relationship("Chapter", back_populates="tests")
 
     questions = db.relationship(
         "Question",
@@ -332,27 +331,25 @@ class PaymentHistory(Base):
     course = db.relationship("Course", back_populates="payments")
 
     
-# ================= Commission =================
-class Commission(Base):
-    __tablename__ = "commission"
 
-    total_amount = db.Column(db.Float, default=0.0, nullable=False)
 
-    @classmethod
-    def add_commission(cls, amount):
-        commission = cls.query.first()
-        if not commission:
-            commission = cls(total_amount=amount)
-            db.session.add(commission)
-        else:
-            commission.total_amount += amount
-        db.session.commit()
-        return commission.total_amount
-    
+class Certificate(Base):
+    __tablename__ = 'certificate'
+
+    code = db.Column(db.String(50), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+
+    # Relationships
+    user = db.relationship('User', backref=db.backref('certificates', lazy=True))
+    course = db.relationship('Course', backref=db.backref('certificates', lazy=True))
+
+    def __str__(self):
+        return f"Chứng chỉ {self.code} - Học viên ID: {self.user_id} - Khóa học ID: {self.course_id}"
 # cd vào thư mục ecourseapp rồi chạy python seed_data.py trong Command Prompt để tạo bảng và tạo dữ liệu mẫu
 
-# if __name__ == "__main__":
-#     with app.app_context():
-#         db.create_all()
-#
-#         db.session.commit()
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+
+        db.session.commit()

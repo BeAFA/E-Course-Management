@@ -1,0 +1,113 @@
+.checkout-container {
+    max-width: 650px;
+    margin: 50px auto;
+    padding: 0 16px;
+}
+
+.checkout-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.checkout-header {
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.checkout-header h2 {
+    font-size: 1.5rem;
+    color: #1e293b;
+    margin: 0;
+}
+
+.course-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.course-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+    color: #0f172a;
+}
+
+.course-info p {
+    margin: 4px 0;
+    color: #475569;
+    font-size: 0.95rem;
+}
+
+.price-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #a50064; /* Màu hồng MoMo */
+}
+
+.price-free {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #10b981; /* Xanh lá */
+}
+
+.payment-method-section h4 {
+    margin-bottom: 16px;
+    color: #1e293b;
+}
+
+/* Thẻ chọn phương thức thanh toán */
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1.5px solid #a50064; /* Viền hồng MoMo */
+    background: #fff0f7; /* Nền hồng nhạt MoMo */
+    padding: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.payment-logo {
+    height: 32px;
+    width: 32px;
+    object-fit: contain;
+}
+
+.payment-free-notice {
+    background: #dcfce7;
+    color: #065f46;
+    padding: 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Nút Submit */
+.btn-checkout {
+    width: 100%;
+    margin-top: 32px;
+    padding: 16px;
+    background: #a50064; /* Nút hồng MoMo */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-checkout:hover {
+    background: #870051;
+    transform: translateY(-1px);
+}

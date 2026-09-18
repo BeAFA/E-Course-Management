@@ -1,85 +1,325 @@
-.lesson-detail-container {
-    max-width: 900px;
+/* ================= TỔNG THỂ ================= */
+.lesson-view-container {
+    max-width: 980px;
+    margin: 28px auto 60px auto;
+    padding: 0 20px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #1e293b;
+    box-sizing: border-box;
+}
+
+.lesson-view-container * {
+    box-sizing: border-box;
+}
+
+/* ================= HEADER CARD ================= */
+.lesson-header-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.breadcrumb-trail {
+    font-size: 13.5px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.breadcrumb-trail a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb-trail a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-trail .sep {
+    color: #cbd5e1;
+}
+
+.lesson-main-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+
+.header-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.btn-action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-lesson {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.btn-edit-lesson:hover {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+.btn-back-chapter {
+    background-color: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.btn-back-chapter:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+}
+
+/* ================= SECTION CARD ================= */
+.lesson-section-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.section-badge-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1.5px solid #f1f5f9;
+    padding-bottom: 12px;
+}
+
+/* ================= HÌNH ẢNH MINH HỌA ================= */
+.image-showcase-card {
+    padding: 12px !important;
+}
+
+.lesson-banner-img-wrap {
     width: 100%;
-    margin: 2.5rem auto;
-    padding: 0 2rem;
+    max-height: 420px;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lesson-banner-img {
+    width: 100%;
+    height: 100%;
+    max-height: 420px;
+    object-fit: cover;
+    display: block;
+}
+
+/* ================= VIDEO PLAYER ================= */
+.video-player-frame {
+    width: 100%;
+    background-color: #000000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.main-video-player {
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+/* ================= TÀI LIỆU ATTACHMENT ================= */
+.attachment-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 20px;
+}
+
+.attachment-icon {
+    width: 48px;
+    height: 48px;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.attachment-meta {
     flex-grow: 1;
 }
 
-.lesson-detail-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.5rem;
+.att-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
 }
 
-.lesson-detail-heading h1 {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 0.4rem;
-}
-
-.lesson-detail-heading .lesson-subtitle {
+.att-sub {
+    font-size: 13px;
     color: #64748b;
-    font-size: 0.95rem;
 }
 
-.lesson-detail-card {
-    background-color: #ffffff;
-    border: 1.5px solid #64748b;
-    border-radius: 4px;
-    box-shadow: var(--shadow-sm);
-    padding: 1.8rem;
-}
-
-.lesson-detail-card + .lesson-detail-card {
-    margin-top: 1.5rem;
-}
-
-.video-wrapper {
-    position: relative;
-    width: 100%;
+.btn-download-att {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #2563eb;
+    padding: 8px 16px;
     border-radius: 8px;
-    overflow: hidden;
-    background-color: #000;
-    margin-bottom: 1.5rem;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: all 0.2s ease;
 }
 
-.video-wrapper video {
-    width: 100%;
-    display: block;
-    background-color: #000;
+.btn-download-att:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
 }
 
-.article-content {
+/* ================= BÀI VIẾT LÝ THUYẾT ================= */
+.article-content-body {
+    font-size: 15.5px;
+    line-height: 1.8;
     color: #334155;
-    font-size: 1rem;
-    line-height: 1.7;
+    word-break: break-word;
+    white-space: pre-line;
 }
 
-.article-content img {
-    max-width: 100%;
+.article-content-body p {
+    margin-bottom: 1rem;
+}
+
+.article-content-body pre, .article-content-body code {
+    background: #f1f5f9;
     border-radius: 6px;
+    font-family: 'Consolas', 'Courier New', monospace;
 }
 
-.lesson-empty-state {
-    text-align: center;
+.article-content-body pre {
+    padding: 14px 18px;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+}
+
+/* ================= ĐIỀU HƯỚNG BÀI TRƯỚC / TIẾP ================= */
+.lesson-bottom-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 32px;
+}
+
+.nav-lesson-placeholder {
+    flex: 1;
+}
+
+.nav-lesson-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 14px 20px;
+    border-radius: 14px;
+    text-decoration: none;
+    color: #1e293b;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+}
+
+.nav-lesson-btn:hover {
+    border-color: #2563eb;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
+}
+
+.next-btn {
+    text-align: right;
+    justify-content: flex-end;
+}
+
+.finish-btn {
+    text-align: right;
+    justify-content: flex-end;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.finish-btn:hover {
+    border-color: #16a34a;
+}
+
+.sub-label {
+    font-size: 11.5px;
+    font-weight: 700;
     color: #64748b;
-    font-style: italic;
-    padding: 3rem 1rem;
-    background-color: #ffffff;
-    border: 1.5px solid #cbd5e1;
-    border-radius: 8px;
+    letter-spacing: 0.5px;
+    display: block;
+}
+
+.title-label {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-top: 2px;
 }
 
 @media (max-width: 768px) {
-    .lesson-detail-container {
-        padding: 0 1rem;
+    .lesson-header-card {
+        flex-direction: column;
+        align-items: flex-start;
     }
-    .lesson-detail-card {
-        padding: 1.2rem;
+    .header-right-actions {
+        width: 100%;
+    }
+    .lesson-bottom-nav {
+        flex-direction: column;
     }
 }

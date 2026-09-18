@@ -1,12 +1,37 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Tự động cập nhật thanh tiến độ từ data-progress do Backend truyền xuống
+    const progressFill = document.getElementById('courseProgressFill');
+    const progressText = document.getElementById('courseProgressText');
+
+    if (progressFill) {
+        let progressVal = progressFill.getAttribute('data-progress');
+        // Tránh giá trị undefined, ép kiểu an toàn
+        progressVal = (progressVal !== null && progressVal !== '') ? parseInt(progressVal, 10) : 0;
+        if (isNaN(progressVal)) progressVal = 0;
+
+        progressFill.style.width = progressVal + '%';
+        if (progressText) {
+            progressText.textContent = progressVal + '%';
+        }
+    }
+
+    // 2. Xử lý đóng/mở Accordion (Bài giảng / Bài kiểm tra)
     const moduleHeaders = document.querySelectorAll('[data-toggle="accordion"]');
     moduleHeaders.forEach(header => {
-        header.addEventListener('click', () => {
+        header.addEventListener('click', (e) => {
+            // Không kích hoạt toggle khi người dùng bấm vào các nút link/button bên trong header
+            if (e.target.closest('a, button, form')) {
+                return;
+            }
+
             const card = header.closest('.module-card');
-            card.classList.toggle('collapsed');
+            if (card) {
+                card.classList.toggle('collapsed');
+            }
         });
     });
 
+    // 3. Tìm kiếm bài giảng/bài thi theo từ khóa
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         const lessonItems = document.querySelectorAll('.lesson-item');
@@ -22,55 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-//    const lessonLinks = document.querySelectorAll('.lesson-link');
-//    lessonLinks.forEach(link => {
-//        link.addEventListener('click', (e) => {
-//            e.preventDefault();
-//            const title = link.getAttribute('data-title') || link.textContent.trim();
-//            const type = link.getAttribute('data-type');
-//
-//            if (type === 'video') {
-//                alert(`Đang mở video bài giảng: "${title}"`);
-//            } else if (type === 'quiz') {
-//                alert(`Bắt đầu làm: "${title}"`);
-//            } else if (type === 'essay') {
-//                alert(`Khu vực nộp bài cho: "${title}"`);
-//            } else if (type === 'exam') {
-//                if (confirm(`Bạn chuẩn bị làm "${title}". Thời gian sẽ được tính ngay khi bắt đầu. Tiếp tục?`)) {
-//                    alert('Đang tải đề thi...');
-//                }
-//            } else {
-//                alert(`Đang mở tài liệu: "${title}"`);
-//            }
-//        });
-//    });
-
-    const btnAskTeacher = document.getElementById('btnAskTeacher');
-    if (btnAskTeacher) {
-        btnAskTeacher.addEventListener('click', () => {
-            const question = prompt('Nhập câu hỏi của bạn gửi đến giảng viên:');
-            if (question && question.trim() !== '') {
-                alert('Câu hỏi của bạn đã được gửi tới giảng viên thành công!');
-            }
-        });
-    }
-
+    // 4. Nút Trợ lý AI (Mở modal chat hoặc hành động tương ứng)
     const btnAiChat = document.getElementById('btnAiChat');
     if (btnAiChat) {
         btnAiChat.addEventListener('click', () => {
-            const aiQuery = prompt('AI Assistant: Bạn cần hỏi gì về khóa học này?');
+            const aiQuery = prompt('AI Assistant: Bạn cần giải đáp thắc mắc gì về khóa học này?');
             if (aiQuery && aiQuery.trim() !== '') {
-                alert(`AI đang xử lý câu hỏi: "${aiQuery}"...`);
-            }
-        });
-    }
-
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
-                window.location.href = '/logout';
+                alert(`Hệ thống đang xử lý câu hỏi: "${aiQuery}"...`);
             }
         });
     }
