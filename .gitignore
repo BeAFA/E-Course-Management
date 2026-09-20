@@ -219,5 +219,5 @@ __marimo__/
 
 .idea/
 
-/ecourseapp/credentials/
+# /ecourseapp/credentials/
 /ecourseapp/one_time_run.py
