@@ -3,56 +3,31 @@ import mimetypes
 import tempfile
 import traceback
 
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request as GoogleAuthRequest
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
-TOKEN_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "credentials", "Test_User.txt")
-
-
-def _load_oauth_config(path):
-    config = {}
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or ":" not in line:
-                continue
-            key, value = line.split(":", 1)
-            config[key.strip()] = value.strip()
-    required = ["refresh_token", "client_id", "client_secret"]
-    missing = [k for k in required if k not in config]
-    if missing:
-        raise ValueError(f"Thiếu thông tin trong {path}: {missing}")
-    return config
-
-
-_cfg = _load_oauth_config(TOKEN_FILE)
-
-credentials = Credentials(
-    token=None,
-    refresh_token=_cfg["refresh_token"],
-    client_id=_cfg["client_id"],
-    client_secret=_cfg["client_secret"],
-    token_uri="https://oauth2.googleapis.com/token",
-    scopes=SCOPES,
-)
+# Đường dẫn an toàn trỏ thẳng vào file drive_key.json
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+KEY_PATH = os.path.abspath(os.path.join(CURRENT_DIR, "..", "credentials", "drive_key.json"))
 
 FOLDER_ID = "1jwBv0BUqeq9MoQzpYp_10AfX2G96QN8V"
 
+credentials = service_account.Credentials.from_service_account_file(
+    KEY_PATH, scopes=SCOPES
+)
 
 def get_drive_service():
-    """Luôn làm mới token nếu đã hết hạn trước khi gọi API"""
-    if credentials.expired or not credentials.valid:
-        credentials.refresh(Request())
+    global credentials
+    if not credentials.valid:
+        credentials.refresh(GoogleAuthRequest())
     return build("drive", "v3", credentials=credentials)
 
-
 def upload_file(filepath, filename):
-    # Xác định đúng mimetype (video/mp4, image/jpeg, application/pdf...)
     mime_type, _ = mimetypes.guess_type(filepath)
     if not mime_type:
         mime_type = "application/octet-stream"
@@ -61,11 +36,10 @@ def upload_file(filepath, filename):
         "name": filename,
         "parents": [FOLDER_ID]
     }
-    
+
     try:
         service = get_drive_service()
 
-        # chunksize 5MB giúp upload video lớn ổn định và không ngắt kết nối giữa chừng
         media = MediaFileUpload(
             filepath,
             mimetype=mime_type,
@@ -73,15 +47,29 @@ def upload_file(filepath, filename):
             chunksize=5 * 1024 * 1024
         )
 
+        # Upload file lên thư mục
         file = service.files().create(
             body=metadata,
             media_body=media,
             fields="id"
         ).execute()
 
-        file_id = file["id"]
-        public_file(file_id)
-        url = get_preview_url(file_id)
+        file_id = file.get("id")
+
+        # Cấp quyền xem công khai (bọc riêng để nếu lỗi không làm hỏng cả luồng upload)
+        try:
+            service.permissions().create(
+                fileId=file_id,
+                body={"type": "anyone", "role": "reader"}
+            ).execute()
+        except Exception as perm_err:
+            print("Cảnh báo public_file:", perm_err)
+
+        if mime_type.startswith("image/"):
+            url = f"https://lh3.googleusercontent.com/d/{file_id}"
+        else:
+            url = f"https://drive.google.com/file/d/{file_id}/preview"
+
         return file_id, url
 
     except HttpError as e:
@@ -103,7 +91,8 @@ def public_file(file_id):
         }
         service.permissions().create(
             fileId=file_id,
-            body=permission
+            body=permission,
+            supportsAllDrives=True
         ).execute()
     except Exception as e:
         print(f"Cảnh báo khi public file {file_id}:", e)
@@ -116,7 +105,7 @@ def get_preview_url(file_id):
 def delete_file(file_id):
     try:
         service = get_drive_service()
-        service.files().delete(fileId=file_id).execute()
+        service.files().delete(fileId=file_id, supportsAllDrives=True).execute()
     except HttpError as e:
         print(f"Không thể xóa file {file_id} trên Drive:", e)
 

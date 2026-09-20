@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 
+import admin
 import requests
 from flask import render_template, request, redirect, Response, stream_with_context, jsonify, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
@@ -13,7 +14,6 @@ from werkzeug.utils import secure_filename
 
 from __init__ import app, db, login, client, GEMINI_MODEL, SYSTEM_INSTRUCTION, VNPAY_CONFIG
 from ai_chat_routes import RESPONSE_SCHEMA, _build_courses_context, MAX_TURNS_SENT, _serialize_message
-from services.drive_service import upload_file, credentials, delete_file
 from models import (
     User, UserRole, Level, Lesson, Chapter, Course, Tag, CourseTag,
     ChatRoom, ChatRoomMessage, Question, Test, Choice, UserTest,
@@ -24,14 +24,17 @@ from vnpay import vnpay
 
 TEMP_UPLOAD_DIR = "temp"
 
-DEFAULT_AVATAR_DRIVE_ID = "1X-nx8rzQBGGg676PHve-0J-KGYpjJj-1"
-DEFAULT_AVATAR_URL = f"https://drive.google.com/uc?id={DEFAULT_AVATAR_DRIVE_ID}"
+from services.cloudinary_service import upload_file, delete_file
 
-DEFAULT_COURSE_IMG_DRIVE_ID = "1AvAw7sucIgoV3ytOruFTTEeEt6YOQQY9"
-DEFAULT_COURSE_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_COURSE_IMG_DRIVE_ID}"
+# Ảnh mặc định chuyển sang link mẫu sẵn của Cloudinary hoặc static nội bộ
+DEFAULT_AVATAR_DRIVE_ID = "default_avatar"
+DEFAULT_AVATAR_URL = "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
 
-DEFAULT_LESSON_IMG_DRIVE_ID = "1DaVBg8l_Ze_b6CB0-4ThfxmIxpxE-ojU"
-DEFAULT_LESSON_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_LESSON_IMG_DRIVE_ID}"
+DEFAULT_COURSE_IMG_DRIVE_ID = "default_course"
+DEFAULT_COURSE_IMG_URL = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop"
+
+DEFAULT_LESSON_IMG_DRIVE_ID = "default_lesson"
+DEFAULT_LESSON_IMG_URL = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop"
 
 MAX_MESSAGE_LENGTH = 500
 
@@ -382,23 +385,34 @@ def create_course():
         selected_tag_ids = request.form.getlist('tag_ids')
 
         if not selected_tag_ids:
-            return render_template(
-                'create_course.html',
-                categories=categories,
-                tags=tags,
-                err_msg="Vui lòng chọn ít nhất một thẻ Tag cho khóa học!"
-            )
+            return render_template('create_course.html', categories=categories, tags=tags,
+                                   err_msg="Vui lòng chọn ít nhất một thẻ Tag cho khóa học!")
 
         if not name or not category_id:
-            return render_template(
-                'create_course.html',
-                categories=categories,
-                tags=tags,
-                err_msg="Vui lòng nhập đầy đủ tên khóa học và thể loại!"
-            )
+            return render_template('create_course.html', categories=categories, tags=tags,
+                                   err_msg="Vui lòng nhập đầy đủ tên khóa học và thể loại!")
 
-        img_drive_id = None
-        img_url = None
+        img_drive_id = DEFAULT_COURSE_IMG_DRIVE_ID
+        img_url = DEFAULT_COURSE_IMG_URL
+
+        img = request.files.get("img")
+        if img and img.filename and img.filename.strip() != '':
+            os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+            filename = secure_filename(img.filename)
+            filepath = os.path.join(TEMP_UPLOAD_DIR, filename)
+            img.save(filepath)
+
+            uploaded_id, uploaded_url = upload_file(filepath, filename)
+
+            if os.path.exists(filepath):
+                os.remove(filepath)
+
+            if uploaded_id is None:
+                return render_template('create_course.html', categories=categories, tags=tags,
+                                       err_msg="Tải ảnh bìa khóa học lên Cloudinary thất bại! Vui lòng thử lại.")
+
+            img_drive_id = uploaded_id
+            img_url = uploaded_url
 
         try:
             new_course = dao.create_course(
@@ -415,12 +429,8 @@ def create_course():
             return redirect(url_for('course_detail', course_id=new_course.id))
         except Exception as ex:
             print("Lỗi tạo khóa học:", ex)
-            return render_template(
-                'create_course.html',
-                categories=categories,
-                tags=tags,
-                err_msg="Có lỗi xảy ra khi tạo khóa học!"
-            )
+            return render_template('create_course.html', categories=categories, tags=tags,
+                                   err_msg="Có lỗi xảy ra khi tạo khóa học!")
 
     return render_template('create_course.html', categories=categories, tags=tags)
 
@@ -476,7 +486,7 @@ def update_course(course_id):
                 )
 
             img_drive_id = uploaded_id
-            img_url = uploaded_url
+            img_url = f"https://lh3.googleusercontent.com/d/{uploaded_id}"
 
         if not name or not category_id:
             err_msg = "Vui lòng nhập tên khóa học và chọn danh mục!"
@@ -768,11 +778,12 @@ def create_or_update_lesson(chapter_id=None, lesson_id=None):
                 return render_template(
                     "create_lesson.html",
                     chapter=chapter, course=course, lesson=lesson,
-                    err_msg="Tải tài liệu PDF lên Drive thất bại, vui lòng thử lại."
+                    err_msg="Tải ảnh lên hệ thống thất bại, vui lòng thử lại."
                 )
 
-            file_drive_id, file_url = uploaded_id, uploaded_url
-            file_replaced = True
+            img_drive_id = uploaded_id
+            img_url = f"https://lh3.googleusercontent.com/d/{uploaded_id}"
+            img_replaced = True
 
         img_drive_id = lesson.img_drive_id if lesson else DEFAULT_LESSON_IMG_DRIVE_ID
         img_url = lesson.img_url if lesson else DEFAULT_LESSON_IMG_URL
@@ -926,33 +937,11 @@ def lesson_detail(lesson_id):
 
 @app.route("/media/video/<file_id>")
 def stream_video(file_id):
-    if not credentials.valid:
-        credentials.refresh(GoogleAuthRequest())
-
-    drive_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-    headers = {"Authorization": f"Bearer {credentials.token}"}
-
-    range_header = request.headers.get("Range")
-    if range_header:
-        headers["Range"] = range_header
-
-    r = requests.get(drive_url, headers=headers, stream=True)
-
-    resp = Response(
-        stream_with_context(r.iter_content(chunk_size=8192)),
-        status=r.status_code,
-        content_type=r.headers.get("Content-Type", "video/mp4"),
-    )
-
-    if "Content-Range" in r.headers:
-        resp.headers["Content-Range"] = r.headers["Content-Range"]
-    if "Content-Length" in r.headers:
-        resp.headers["Content-Length"] = r.headers["Content-Length"]
-
-    resp.headers["Accept-Ranges"] = "bytes"
-    resp.headers["Content-Disposition"] = "inline"
-
-    return resp
+    # Redirect trực tiếp sang URL Cloudinary tương ứng
+    lesson = Lesson.query.filter_by(video_drive_id=file_id).first()
+    if lesson and lesson.video_url:
+        return redirect(lesson.video_url)
+    return "Video not found", 404
 
 
 # ---------------- AI CHAT ROUTES ----------------
@@ -1267,16 +1256,30 @@ def checkout(course_id):
 @login_required
 def process_checkout(course_id):
     course = dao.get_course_by_id(course_id)
+    if not course:
+        flash("Không tìm thấy thông tin khóa học!", "error")
+        return redirect(url_for('get_all_courses'))
+
     if not course.price or course.price <= 0:
         dao.enroll_course(current_user.id, course.id)
         flash("Đăng ký khóa học miễn phí thành công!", "success")
         return redirect(url_for('course_detail', course_id=course.id))
 
+    # Lấy thông tin cấu hình từ biến môi trường (fallback trực tiếp nếu VNPAY_CONFIG bị thiếu)
+    tmn_code = VNPAY_CONFIG.get('vnp_TmnCode') or os.getenv('VNPAY_TMN_CODE')
+    hash_secret = VNPAY_CONFIG.get('vnp_HashSecret') or os.getenv('VNPAY_HASH_SECRET')
+    vnpay_url = VNPAY_CONFIG.get('vnp_Url') or os.getenv('VNPAY_URL')
+    return_url = VNPAY_CONFIG.get('vnp_ReturnUrl') or os.getenv('VNPAY_RETURN_URL')
+
+    if not hash_secret or not tmn_code:
+        flash("Lỗi hệ thống: Chưa cấu hình thông tin VNPAY Sandbox!", "error")
+        return redirect(url_for('checkout', course_id=course.id))
+
     vnp = vnpay()
     vnp.requestData['vnp_Version'] = '2.1.0'
     vnp.requestData['vnp_Command'] = 'pay'
-    vnp.requestData['vnp_TmnCode'] = VNPAY_CONFIG['vnp_TmnCode']
-    vnp.requestData['vnp_Amount'] = int(course.price) * 100
+    vnp.requestData['vnp_TmnCode'] = tmn_code
+    vnp.requestData['vnp_Amount'] = str(int(course.price) * 100)
     vnp.requestData['vnp_CurrCode'] = 'VND'
 
     txn_ref = f"{current_user.id}-{course.id}-{int(datetime.now().timestamp())}"
@@ -1285,10 +1288,10 @@ def process_checkout(course_id):
     vnp.requestData['vnp_OrderType'] = 'billpayment'
     vnp.requestData['vnp_Locale'] = 'vn'
     vnp.requestData['vnp_CreateDate'] = datetime.now().strftime('%Y%m%d%H%M%S')
-    vnp.requestData['vnp_IpAddr'] = request.remote_addr
-    vnp.requestData['vnp_ReturnUrl'] = VNPAY_CONFIG['vnp_ReturnUrl']
+    vnp.requestData['vnp_IpAddr'] = request.remote_addr or '127.0.0.1'
+    vnp.requestData['vnp_ReturnUrl'] = return_url
 
-    vnpay_payment_url = vnp.get_payment_url(VNPAY_CONFIG['vnp_Url'], VNPAY_CONFIG['vnp_HashSecret'])
+    vnpay_payment_url = vnp.get_payment_url(vnpay_url, hash_secret)
     return redirect(vnpay_payment_url)
 
 

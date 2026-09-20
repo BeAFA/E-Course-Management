@@ -43,17 +43,27 @@
     </section>
     {% endif %}
 
-    <!-- 3. Video Bài Giảng -->
-    {% if lesson.video_drive_id %}
+    {% if lesson.video_url or lesson.video_drive_id %}
     <section class="lesson-section-card video-card">
         <div class="section-badge-title">
             <i class="fa-solid fa-circle-play text-danger"></i> Video bài giảng trực tuyến
         </div>
         <div class="video-player-frame">
-            <video controls preload="metadata" class="main-video-player" poster="{{ lesson.img_url if lesson.img_url else '' }}">
-                <source src="{{ url_for('stream_video', file_id=lesson.video_drive_id) }}" type="video/mp4">
-                Trình duyệt của bạn không hỗ trợ phát trực tiếp video này.
-            </video>
+            {% if lesson.video_url and ('cloudinary.com' in lesson.video_url or lesson.video_url.endswith('.mp4')) %}
+                {# Trường hợp 1: Video trên Cloudinary - Phát mượt mà trực tiếp #}
+                <video controls preload="auto" class="main-video-player" style="width: 100%; border-radius: 8px;">
+                    <source src="{{ lesson.video_url }}" type="video/mp4">
+                    Trình duyệt của bạn không hỗ trợ phát trực tiếp video này.
+                </video>
+            {% elif lesson.video_drive_id %}
+                {# Trường hợp 2: Dữ liệu cũ còn nằm trên Google Drive - Dùng iframe player chính thức #}
+                <iframe src="https://drive.google.com/file/d/{{ lesson.video_drive_id }}/preview" 
+                        width="100%" 
+                        height="480" 
+                        allow="autoplay; fullscreen" 
+                        style="border: none; border-radius: 8px; width: 100%;">
+                </iframe>
+            {% endif %}
         </div>
     </section>
     {% endif %}

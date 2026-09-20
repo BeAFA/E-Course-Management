@@ -114,8 +114,13 @@
 
                         <a href="{{ url_for('course_detail', course_id=course.id) }}"
                            style="text-decoration: none; color: inherit;">
-                            <img src="https://drive.google.com/thumbnail?id={{ course.img_drive_id }}&sz=w500"
-                                 class="card-img-top" alt="{{ course.name }}" style="height: 160px; object-fit: cover;">
+                            <!-- Sử dụng course.img_url thay vì Drive thumbnail -->
+                            <img src="{{ course.img_url or 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop' }}"
+                                 class="card-img-top" 
+                                 alt="{{ course.name }}" 
+                                 style="height: 160px; object-fit: cover;"
+                                 loading="lazy"
+                                 onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop';">
                             <div class="card-body">
                                 <span class="badge bg-secondary mb-2">{{ course.category.name if course.category else 'Khóa học' }}</span>
                                 <h5 class="card-title"
@@ -123,7 +128,7 @@
                                     {{ course.name }}
                                 </h5>
                                 <p class="card-text text-muted mb-2" style="font-size: 0.9rem;">
-                                    Giảng viên: {{ course.teacher.name if course.teacher.name else 'Đang cập nhật' }}
+                                    Giảng viên: {{ course.teacher.name if (course.teacher and course.teacher.name) else 'Đang cập nhật' }}
                                 </p>
                                 <div class="d-flex justify-content-between align-items-center mt-3">
                                     <span style="font-weight: 700; color: #2563eb; font-size: 1.1rem;">

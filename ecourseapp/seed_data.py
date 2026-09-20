@@ -32,15 +32,19 @@ def hash_password(raw_password: str) -> str:
     return generate_password_hash(raw_password.strip())
 
 
-# Ảnh mặc định dùng chung cho dữ liệu mẫu (lấy từ Google Drive).
-DEFAULT_AVATAR_DRIVE_ID = "1X-nx8rzQBGGg676PHve-0J-KGYpjJj-1"
-DEFAULT_AVATAR_URL = f"https://drive.google.com/uc?id={DEFAULT_AVATAR_DRIVE_ID}"
+# Ảnh và Video mặc định dùng CDN trực tiếp (Cloudinary & Unsplash)
+DEFAULT_AVATAR_PUBLIC_ID = "ecourse/avatars/default_avatar"
+DEFAULT_AVATAR_URL = "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
 
-DEFAULT_COURSE_IMG_DRIVE_ID = "1AvAw7sucIgoV3ytOruFTTEeEt6YOQQY9"
-DEFAULT_COURSE_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_COURSE_IMG_DRIVE_ID}"
+DEFAULT_COURSE_PUBLIC_ID = "ecourse/courses/default_course"
+DEFAULT_COURSE_URL = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop"
 
-DEFAULT_LESSON_IMG_DRIVE_ID = "1DaVBg8l_Ze_b6CB0-4ThfxmIxpxE-ojU"
-DEFAULT_LESSON_IMG_URL = f"https://drive.google.com/uc?id={DEFAULT_LESSON_IMG_DRIVE_ID}"
+DEFAULT_LESSON_IMG_PUBLIC_ID = "ecourse/lessons/default_lesson_img"
+DEFAULT_LESSON_IMG_URL = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop"
+
+# Video MP4 mẫu phát trực tiếp mượt mà từ Cloudinary
+DEFAULT_VIDEO_PUBLIC_ID = "ecourse/videos/sample_lesson_video"
+DEFAULT_VIDEO_URL = "https://res.cloudinary.com/demo/video/upload/v1687522511/samples/cld-sample-video.mp4"
 
 
 def seed():
@@ -52,28 +56,28 @@ def seed():
         users = [
             User(email="admin@ecourse.vn", password=hash_password("123456"),
                  name="Nguyễn Văn Admin", role=UserRole.ADMIN,
-                 img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="teacher.python@ecourse.vn", password=hash_password("123456"),
                  name="Trần Thị Hồng", major="Công nghệ thông tin", role=UserRole.TEACHER,
-                 img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="teacher.web@ecourse.vn", password=hash_password("123456"),
                  name="Lê Minh Tuấn", major="Kỹ thuật phần mềm", role=UserRole.TEACHER,
-                 img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="teacher.ai@ecourse.vn", password=hash_password("123456"),
                  name="Phạm Quốc Bảo", major="Khoa học dữ liệu", role=UserRole.TEACHER,
-                 img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="student.an@ecourse.vn", password=hash_password("123456"),
                  name="Nguyễn Văn An", level=Level.JUNIOR, major="Công nghệ thông tin",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="student.binh@ecourse.vn", password=hash_password("123456"),
                  name="Trần Thị Bình", level=Level.SENIOR, major="Hệ thống thông tin",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="student.cuong@ecourse.vn", password=hash_password("123456"),
                  name="Lê Văn Cường", level=Level.MASTER, major="Khoa học máy tính",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
             User(email="student.dung@ecourse.vn", password=hash_password("123456"),
                  name="Phạm Thị Dung", level=Level.EXPERT, major="Trí tuệ nhân tạo",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_DRIVE_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
         ]
         db.session.add_all(users)
         db.session.commit()
@@ -110,28 +114,28 @@ def seed():
         courses = [
             Course(name="Lập trình Python cơ bản", price=299000, description="Khoá học Python cho người mới bắt đầu",
                    category_id=categories[0].id, teacher_id=teachers[0].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop"),
             Course(name="Flask - Xây dựng Web App", price=399000, description="Xây dựng ứng dụng web với Flask",
                    category_id=categories[0].id, teacher_id=teachers[0].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop"),
             Course(name="ReactJS từ Zero đến Hero", price=499000, description="Xây dựng giao diện với ReactJS",
                    category_id=categories[0].id, teacher_id=teachers[1].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&auto=format&fit=crop"),
             Course(name="Lập trình Android cơ bản", price=349000, description="Xây dựng ứng dụng Android với Java",
                    category_id=categories[1].id, teacher_id=teachers[1].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?w=600&auto=format&fit=crop"),
             Course(name="Nhập môn Khoa học dữ liệu", price=599000, description="Phân tích dữ liệu với Python",
                    category_id=categories[2].id, teacher_id=teachers[2].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop"),
             Course(name="Machine Learning cơ bản", price=799000, description="Các thuật toán học máy phổ biến",
                    category_id=categories[3].id, teacher_id=teachers[2].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1507146426996-ef05306b995a?w=600&auto=format&fit=crop"),
             Course(name="Thiết kế cơ sở dữ liệu MySQL", price=299000, description="Thiết kế và tối ưu CSDL quan hệ",
                    category_id=categories[4].id, teacher_id=teachers[0].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=600&auto=format&fit=crop"),
             Course(name="Docker & Kubernetes cơ bản", price=459000, description="Triển khai ứng dụng với container",
                    category_id=categories[5].id, teacher_id=teachers[1].id,
-                   img_drive_id=DEFAULT_COURSE_IMG_DRIVE_ID, img_url=DEFAULT_COURSE_IMG_URL),
+                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1605745341112-85968b19335b?w=600&auto=format&fit=crop"),
         ]
         db.session.add_all(courses)
         db.session.commit()
@@ -193,25 +197,35 @@ def seed():
         # ================= LESSON =================
         lessons = [
             Lesson(chapter_id=chapters[0].id, title="Cài đặt Python & IDE", article="Hướng dẫn cài đặt Python và VS Code",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[0].id, title="Biến và kiểu dữ liệu", article="Các kiểu dữ liệu cơ bản trong Python",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[1].id, title="List và Tuple", article="Cách sử dụng List và Tuple",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[2].id, title="Cài đặt Flask", article="Tạo project Flask đầu tiên",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[3].id, title="Kết nối MySQL với Flask", article="Cấu hình SQLAlchemy",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[4].id, title="Tạo Component đầu tiên", article="Function Component trong React",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[5].id, title="Tạo Activity đầu tiên", article="Layout XML cơ bản",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[6].id, title="Đọc dữ liệu với Pandas", article="DataFrame và Series",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[7].id, title="Xây dựng mô hình hồi quy", article="Fit và predict với Scikit-learn",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
             Lesson(chapter_id=chapters[9].id, title="Viết Dockerfile đầu tiên", article="Build image cho ứng dụng Flask",
-                   img_drive_id=DEFAULT_LESSON_IMG_DRIVE_ID, img_url=DEFAULT_LESSON_IMG_URL),
+                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
+                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
         ]
         db.session.add_all(lessons)
         db.session.commit()
@@ -333,27 +347,26 @@ def seed():
         # ================= PAYMENT HISTORY =================
         payments = [
             PaymentHistory(user_id=students[0].id, course_id=courses[0].id, transaction_id="TXN0001",
-                            payment_method=PaymentMethod.MOMO, price=courses[0].price),
+                           payment_method=PaymentMethod.MOMO, price=courses[0].price),
             PaymentHistory(user_id=students[0].id, course_id=courses[1].id, transaction_id="TXN0002",
-                            payment_method=PaymentMethod.VNPAY, price=courses[1].price),
+                           payment_method=PaymentMethod.VNPAY, price=courses[1].price),
             PaymentHistory(user_id=students[1].id, course_id=courses[2].id, transaction_id="TXN0003",
-                            payment_method=PaymentMethod.MOMO, price=courses[2].price),
+                           payment_method=PaymentMethod.MOMO, price=courses[2].price),
             PaymentHistory(user_id=students[1].id, course_id=courses[3].id, transaction_id="TXN0004",
-                            payment_method=PaymentMethod.VNPAY, price=courses[3].price),
+                           payment_method=PaymentMethod.VNPAY, price=courses[3].price),
             PaymentHistory(user_id=students[2].id, course_id=courses[4].id, transaction_id="TXN0005",
-                            payment_method=PaymentMethod.MOMO, price=courses[4].price),
+                           payment_method=PaymentMethod.MOMO, price=courses[4].price),
             PaymentHistory(user_id=students[2].id, course_id=courses[5].id, transaction_id="TXN0006",
-                            payment_method=PaymentMethod.VNPAY, price=courses[5].price),
+                           payment_method=PaymentMethod.VNPAY, price=courses[5].price),
             PaymentHistory(user_id=students[3].id, course_id=courses[6].id, transaction_id="TXN0007",
-                            payment_method=PaymentMethod.MOMO, price=courses[6].price),
+                           payment_method=PaymentMethod.MOMO, price=courses[6].price),
             PaymentHistory(user_id=students[3].id, course_id=courses[7].id, transaction_id="TXN0008",
-                            payment_method=PaymentMethod.VNPAY, price=courses[7].price),
+                           payment_method=PaymentMethod.VNPAY, price=courses[7].price),
         ]
         db.session.add_all(payments)
         db.session.commit()
 
         # ================= AI CHAT ROOM =================
-        # Mỗi phần tử: (student, tiêu đề đoạn chat)
         ai_chat_rooms = [
             AIChatRoom(user_id=students[0].id, title="Gợi ý khóa học lập trình Python"),
             AIChatRoom(user_id=students[0].id, title="Lộ trình học Machine Learning từ đầu"),
@@ -364,7 +377,6 @@ def seed():
         db.session.commit()
 
         # ================= AI CHAT ROOM MESSAGE =================
-        # Mỗi phần tử: (room, người gửi (USER/AI), nội dung, user_id nếu là USER)
         ai_chat_message_data = [
             (ai_chat_rooms[0], SenderType.USER, "Mình chưa biết lập trình, nên bắt đầu từ khóa học nào?", students[0].id),
             (ai_chat_rooms[0], SenderType.AI,
@@ -394,17 +406,13 @@ def seed():
         db.session.commit()
 
         # ================= COURSE RECOMMENDATION =================
-        # Gắn khóa học được AI gợi ý vào đúng tin nhắn AI tương ứng ở trên.
-        # ai_chat_messages[1] = câu trả lời AI trong ai_chat_rooms[0] -> gợi ý khóa Python cơ bản (courses[0])
-        # ai_chat_messages[3] = câu trả lời AI trong ai_chat_rooms[1] -> gợi ý khóa Machine Learning (courses[5])
-        # ai_chat_messages[6] = câu trả lời AI trong ai_chat_rooms[3] -> gợi ý khóa Thiết kế CSDL (courses[6])
         course_recommendations = [
             CourseRecommendation(user_id=students[0].id, course_id=courses[0].id,
-                                  ai_chat_room_message_id=ai_chat_messages[1].id),
+                                 ai_chat_room_message_id=ai_chat_messages[1].id),
             CourseRecommendation(user_id=students[0].id, course_id=courses[5].id,
-                                  ai_chat_room_message_id=ai_chat_messages[3].id),
+                                 ai_chat_room_message_id=ai_chat_messages[3].id),
             CourseRecommendation(user_id=students[2].id, course_id=courses[6].id,
-                                  ai_chat_room_message_id=ai_chat_messages[6].id),
+                                 ai_chat_room_message_id=ai_chat_messages[6].id),
         ]
         db.session.add_all(course_recommendations)
         db.session.commit()
@@ -417,7 +425,7 @@ def seed():
         print(f"- {len(ratings)} ratings")
         print(f"- {len(course_tags)} course_tags")
         print(f"- {len(chapters)} chapters")
-        print(f"- {len(lessons)} lessons")
+        print(f"- {len(lessons)} lessons (đã kèm video MP4 trực tiếp)")
         print(f"- {len(tests)} tests")
         print(f"- {len(questions)} questions / {len(choices)} choices")
         print(f"- {len(user_tests)} user_tests")
