@@ -5,7 +5,7 @@ Hệ thống quản lý khóa học trực tuyến được xây dựng bằng F
 ## Tác giả
 
 - BeAFA
-- DinhNguyen9490
+- DinhNguyen9404
 - HuySaBo
 
 ## Giới thiệu
