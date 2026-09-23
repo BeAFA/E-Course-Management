@@ -148,7 +148,7 @@ activemq-data/
 *.sage.py
 
 # Environments
-
+.env
 .envrc
 .venv
 env/
@@ -219,6 +219,5 @@ __marimo__/
 
 .idea/
 
-# /ecourseapp/credentials/
+/ecourseapp/credentials/
 /ecourseapp/one_time_run.py
-/ecourseapp/credentials/ai_api_key.jsonecourseapp/credentials/ai_api_key.json
