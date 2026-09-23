@@ -2,9 +2,9 @@ name: Flask E-Course CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master, Merge_huy2008_va_dinh3008 ]
+    branches: [ main, master]
   pull_request:
-    branches: [ main, master, Merge_huy2008_va_dinh3008 ]
+    branches: [ main, master]
 
 jobs:
   test:

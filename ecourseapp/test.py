@@ -3,7 +3,7 @@ import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 from __init__ import app, db
 from models import (
-    User, Course, Category, Tag, Chapter, Lesson, 
+    User, Course, Category, Tag, CourseTag, Chapter, Lesson, 
     Enrollment, PaymentHistory, UserRole, PaymentMethod
 )
 import dao
@@ -11,14 +11,12 @@ import dao
 
 class ECourseSystemTestCase(unittest.TestCase):
     def setUp(self):
-        # Khởi tạo môi trường test với app_context
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
         self.app = app.test_client()
         self.app_context = app.app_context()
         self.app_context.push()
 
-        # Mã định danh duy nhất cho mỗi lần test
         self.unique_id = uuid.uuid4().hex[:6]
 
         # 1. Tạo Category test
@@ -60,17 +58,71 @@ class ECourseSystemTestCase(unittest.TestCase):
         db.session.commit()
 
     def tearDown(self):
-        # Dọn dẹp tài nguyên cơ bản sau mỗi testcase
+        #Dọn dẹp
         try:
+            test_users = User.query.filter(User.email.like(f"%{self.unique_id}%")).all()
+            test_user_ids = [u.id for u in test_users]
+
+            test_courses = Course.query.filter(
+                (Course.name.like(f"%{self.unique_id}%")) |
+                (Course.category_id == self.category.id) |
+                (Course.teacher_id.in_(test_user_ids))
+            ).all()
+            test_course_ids = [c.id for c in test_courses]
+
+            payments = PaymentHistory.query.filter(
+                (PaymentHistory.user_id.in_(test_user_ids)) |
+                (PaymentHistory.course_id.in_(test_course_ids)) |
+                (PaymentHistory.transaction_id.like(f"%{self.unique_id}%"))
+            ).all()
+            for p in payments:
+                db.session.delete(p)
+
+            enrollments = Enrollment.query.filter(
+                (Enrollment.user_id.in_(test_user_ids)) |
+                (Enrollment.course_id.in_(test_course_ids))
+            ).all()
+            for e in enrollments:
+                db.session.delete(e)
+
+            test_tags = Tag.query.filter(Tag.name.like(f"%{self.unique_id}%")).all()
+            test_tag_ids = [t.id for t in test_tags]
+            course_tags = CourseTag.query.filter(
+                (CourseTag.course_id.in_(test_course_ids)) |
+                (CourseTag.tag_id.in_(test_tag_ids))
+            ).all()
+            for ct in course_tags:
+                db.session.delete(ct)
+
+            chapters = Chapter.query.filter(Chapter.course_id.in_(test_course_ids)).all()
+            for ch in chapters:
+                lessons = Lesson.query.filter_by(chapter_id=ch.id).all()
+                for l in lessons:
+                    db.session.delete(l)
+                db.session.delete(ch)
+
+            for c in test_courses:
+                db.session.delete(c)
+
+            for t in test_tags:
+                db.session.delete(t)
+
+            cat = db.session.get(Category, self.category.id)
+            if cat:
+                db.session.delete(cat)
+
+            for u in test_users:
+                db.session.delete(u)
+
+            db.session.commit()
+        except Exception:
             db.session.rollback()
         finally:
             db.session.remove()
             self.app_context.pop()
 
-   
     # Kiểm thử chức năng Đăng ký, Đăng nhập
     def test_user_registration_success(self):
-        # Đăng ký tài khoản học viên mới và mã hóa mật khẩu
         email = f"new_stu_{self.unique_id}@test.com"
         new_user = User(
             name="New Student",
@@ -87,7 +139,7 @@ class ECourseSystemTestCase(unittest.TestCase):
         self.assertEqual(new_user.email, email)
 
     def test_user_login_authentication(self):
-        #Xác thực đăng nhập đúng và sai mật khẩu
+        # Xác thực đăng nhập đúng và sai mật khẩu
         user = User.query.filter_by(email=self.student.email).first()
         self.assertIsNotNone(user)
 
@@ -99,7 +151,6 @@ class ECourseSystemTestCase(unittest.TestCase):
 
     # Kiểm thử chức năng Lọc và Tìm kiếm khóa học
     def test_course_search_and_filter(self):
-        # Tìm kiếm khóa học theo từ khóa và danh mục
         kw_test = f"SpecialKW_{self.unique_id}"
         c1 = dao.create_course(
             name=f"Khoa hoc {kw_test}",
@@ -118,10 +169,8 @@ class ECourseSystemTestCase(unittest.TestCase):
         results_cat = dao.get_courses(category_id=self.category.id)
         self.assertTrue(any(c.id == c1.id for c in results_cat))
 
-   
-    # Đăng ký và Thanh toán khóa học
+    # Kiểm thử chức năng Đăng ký và Thanh toán khóa học
     def test_course_enrollment_and_payment(self):
-        # Đăng ký khóa học và lưu lịch sử giao dịch
         course = dao.create_course(
             name=f"Payment Course {self.unique_id}",
             price=300000,
@@ -152,7 +201,7 @@ class ECourseSystemTestCase(unittest.TestCase):
         self.assertIsNotNone(saved_payment)
         self.assertEqual(saved_payment.price, 300000)
 
-    # Thêm, Sửa khóa học
+    #  Kiểm thử chức năng Thêm, Sửa khóa học
     def test_course_crud_operations(self):
         # Tạo mới và cập nhật thông tin khóa học
         # 1. Thêm mới khóa học
@@ -184,9 +233,8 @@ class ECourseSystemTestCase(unittest.TestCase):
         self.assertEqual(updated.name, f"Updated Course {self.unique_id}")
         self.assertEqual(updated.price, 150000)
 
-    # Thêm, Sửa nội dung khóa học
+    # Kiểm thử chức năng Thêm, Sửa nội dung khóa học
     def test_course_content_crud(self):
-        # Tạo chương học và thêm/sửa bài học trong chương
         # 1. Tạo khóa học
         course = dao.create_course(
             name=f"Content Course {self.unique_id}",
@@ -221,10 +269,41 @@ class ECourseSystemTestCase(unittest.TestCase):
         db.session.commit()
         self.assertEqual(db.session.get(Lesson, lesson.id).title, "Bài 1: Cài đặt công cụ (Bản mới)")
 
+    # Kiểm thử chức năng Quản lý người dùng (Đọc thống kê)
+    def test_user_management(self):
+        total_before = db.session.query(User).count()
+        students_before = db.session.query(User).filter_by(role=UserRole.STUDENT).count()
+        teachers_before = db.session.query(User).filter_by(role=UserRole.TEACHER).count()
 
-    # Quản lý trang cá nhân
+        new_student = User(
+            email=f"stu_stat_{self.unique_id}@test.com",
+            name="New Student Stat",
+            password=generate_password_hash("123456"),
+            role=UserRole.STUDENT,
+            img_drive_id="pid_stat1",
+            img_url="https://res.cloudinary.com/demo/image/upload/sample.jpg"
+        )
+        new_teacher = User(
+            email=f"tea_stat_{self.unique_id}@test.com",
+            name="New Teacher Stat",
+            password=generate_password_hash("123456"),
+            role=UserRole.TEACHER,
+            img_drive_id="pid_stat2",
+            img_url="https://res.cloudinary.com/demo/image/upload/sample.jpg"
+        )
+        db.session.add_all([new_student, new_teacher])
+        db.session.commit()
+
+        total_after = db.session.query(User).count()
+        students_after = db.session.query(User).filter_by(role=UserRole.STUDENT).count()
+        teachers_after = db.session.query(User).filter_by(role=UserRole.TEACHER).count()
+
+        self.assertEqual(total_after, total_before + 2)
+        self.assertEqual(students_after, students_before + 1)
+        self.assertEqual(teachers_after, teachers_before + 1)
+
+    # Kiểm thử chức năng Quản lý trang cá nhân
     def test_user_profile_management(self):
-        # Cập nhật thông tin cá nhân và mật khẩu
         user = self.student
         user.name = "Ten Moi Test"
         user.major = "Khoa hoc may tinh"

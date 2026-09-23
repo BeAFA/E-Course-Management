@@ -38,34 +38,64 @@
     {% if lesson.img_url %}
     <section class="lesson-section-card image-showcase-card">
         <div class="lesson-banner-img-wrap">
-            <img src="{{ lesson.img_url }}" alt="{{ lesson.title }}" class="lesson-banner-img">
+            <img src="{{ lesson.img_url }}" alt="{{ lesson.title }}" class="lesson-banner-img" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 8px;">
         </div>
     </section>
     {% endif %}
 
+    <!-- 3. Khối Video Bài Giảng Trực Tuyến -->
     {% if lesson.video_url or lesson.video_drive_id %}
     <section class="lesson-section-card video-card">
-        <div class="section-badge-title">
+        <div class="section-badge-title mb-3">
             <i class="fa-solid fa-circle-play text-danger"></i> Video bài giảng trực tuyến
         </div>
-        <div class="video-player-frame">
-            {% if lesson.video_url and ('cloudinary.com' in lesson.video_url or lesson.video_url.endswith('.mp4')) %}
-                {# Trường hợp 1: Video trên Cloudinary - Phát mượt mà trực tiếp #}
-                <video controls preload="auto" class="main-video-player" style="width: 100%; border-radius: 8px;">
-                    <source src="{{ lesson.video_url }}" type="video/mp4">
-                    Trình duyệt của bạn không hỗ trợ phát trực tiếp video này.
-                </video>
-            {% elif lesson.video_drive_id %}
-                {# Trường hợp 2: Dữ liệu cũ còn nằm trên Google Drive - Dùng iframe player chính thức #}
-                <iframe src="https://drive.google.com/file/d/{{ lesson.video_drive_id }}/preview" 
-                        width="100%" 
-                        height="480" 
-                        allow="autoplay; fullscreen" 
-                        style="border: none; border-radius: 8px; width: 100%;">
-                </iframe>
-            {% endif %}
+        <div id="videoContainer" class="video-player-frame" style="border-radius: 8px; overflow: hidden; background: #000; min-height: 450px; display: flex; align-items: center; justify-content: center;">
+            <!-- Trình phát video sẽ được nạp tự động qua script -->
         </div>
     </section>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const rawUrl = "{{ lesson.video_url or '' }}".trim();
+            const driveId = "{{ lesson.video_drive_id or '' }}".trim();
+            const container = document.getElementById("videoContainer");
+
+            function getYouTubeId(url) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                const match = url.match(regExp);
+                return (match && match[2].length === 11) ? match[2] : null;
+            }
+
+            if (rawUrl) {
+                const ytId = getYouTubeId(rawUrl);
+                if (ytId) {
+                    // Video YouTube
+                    container.innerHTML = `
+                        <div style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+                            <iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0" 
+                                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen>
+                            </iframe>
+                        </div>`;
+                } else if (rawUrl.includes("cloudinary.com") || rawUrl.endsWith(".mp4")) {
+                    // Video MP4 / Cloudinary
+                    container.innerHTML = `
+                        <video controls preload="auto" style="width: 100%; max-height: 520px; display: block; border-radius: 8px;">
+                            <source src="${rawUrl}" type="video/mp4">
+                            Trình duyệt không hỗ trợ xem video trực tiếp.
+                        </video>`;
+                }
+            } else if (driveId) {
+                // Video dự phòng từ Google Drive
+                container.innerHTML = `
+                    <iframe src="https://drive.google.com/file/d/${driveId}/preview" 
+                            width="100%" height="480" allow="autoplay; fullscreen" 
+                            style="border: none; border-radius: 8px; width: 100%;">
+                    </iframe>`;
+            }
+        });
+    </script>
     {% endif %}
 
     <!-- 4. Tài Liệu PDF Đính Kèm -->
@@ -88,12 +118,12 @@
 
     <!-- 5. Nội Dung Bài Viết / Lý Thuyết -->
     <section class="lesson-section-card article-card">
-        <div class="section-badge-title">
+        <div class="section-badge-title mb-3">
             <i class="fa-solid fa-book-open-reader text-primary"></i> Lý thuyết & Hướng dẫn chi tiết
         </div>
         <div class="article-content-body">
             {% if lesson.article and lesson.article.strip() != "" %}
-                {{ lesson.article | safe}}
+                {{ lesson.article | safe }}
             {% else %}
                 <p class="text-muted fst-italic">Bài giảng này hiện chưa có nội dung bài viết lý thuyết.</p>
             {% endif %}
