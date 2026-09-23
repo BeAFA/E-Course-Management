@@ -81,6 +81,38 @@
                 </div>
             </div>
 
+            <div class="mb-4 tag-section">
+                <label class="form-label fw-bold">
+                    <i class="fa-solid fa-tags text-primary me-1"></i> Thẻ môn học / Tags <span
+                        class="text-danger">(*)</span>
+                </label>
+                <div class="text-muted small mb-2">Chọn ít nhất một chủ đề phù hợp, hoặc thêm chủ đề mới:</div>
+
+                <div class="tag-input-row mb-2">
+                    <input type="text" class="tag-input" id="newTagInput" placeholder="Nhập tên tag mới..."
+                           maxlength="80">
+                    <button type="button" class="btn-submit" id="btnAddTag">
+                        <i class="fa-solid fa-plus"></i> Tạo
+                    </button>
+                </div>
+                <div id="tagCreateMsg" class="small mb-2 tag-msg"></div>
+
+                <div class="d-flex flex-wrap gap-2 p-3 border rounded-3 tag-list" id="tagListContainer">
+                    {% if tags and tags|length > 0 %}
+                    {% for tag in tags %}
+                    <div class="form-check-inline m-0">
+                        <input class="btn-check" type="checkbox" name="tag_ids" id="tag_{{ tag.id }}"
+                               value="{{ tag.id }}" autocomplete="off"
+                               {% if current_tag_ids and tag.id in current_tag_ids %}checked{% endif %}>
+                        <label class="tag-pill" for="tag_{{ tag.id }}"># {{ tag.name }}</label>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <span class="text-muted fst-italic" id="noTagPlaceholder">Chưa có tag nào trong hệ thống.</span>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="img">Ảnh khóa học</label>
                 {% if course and (course.img_url or course.img_drive_id) %}

@@ -2,49 +2,73 @@
     <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
         <div class="container-fluid">
             <a href="{{ url_for('home') }}" class="navbar-brand d-flex align-items-center gap-2">
-                <img src="/static/img/logo.png" style="height: 38px; width: auto;" alt="E-Course"> 
+                <img src="/static/img/logo.png" style="height: 38px; width: auto;" alt="E-Course">
                 <span class="fw-bold">E-Course</span>
             </a>
+            <form action="{{ url_for('get_all_courses') }}" method="GET" class="d-flex align-items-center ms-lg-3 my-1"
+                  id="filterForm">
+                <div class="input-group input-group-sm" style="width: 300px;">
+                    <input type="text" name="kw" id="searchInput"
+                           class="form-control bg-white text-dark shadow-none border-0"
+                           placeholder="Tên khóa học, giảng viên..."
+                           value="{{ request.args.get('kw', '') }}">
+
+                    <button type="submit" class="btn btn-primary px-3 d-flex align-items-center justify-content-center" style="background-color: #0d6efd;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                             viewBox="0 0 16 16">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
             <div class="collapse navbar-collapse flex-row-reverse" id="mynavbar">
                 {% if current_user.is_authenticated %}
-                    <!-- Đăng xuất -->
-                    <a href="{{ url_for('logout_my_user') }}" class="btn btn-outline-danger btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
-                    </a>
+                <!-- Đăng xuất -->
+                <a href="{{ url_for('logout_my_user') }}"
+                   class="btn btn-outline-danger btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                </a>
 
-                    <!-- Dành cho Giảng viên -->
-                    {% if current_user.role.value == 'TEACHER' %}
-                    <a href="{{ url_for('get_my_course') }}" class="btn btn-outline-light btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-solid fa-chalkboard-user"></i> Khóa học giảng dạy
-                    </a>
-                    <a href="{{ url_for('teacher_dashboard') }}" class="btn btn-outline-info btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-solid fa-chart-line"></i> Thống kê
-                    </a>
-                    {% endif %}
+                <!-- Dành cho Giảng viên -->
+                {% if current_user.role.value == 'TEACHER' %}
+                <a href="{{ url_for('get_my_course') }}"
+                   class="btn btn-outline-light btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-chalkboard-user"></i> Khóa học giảng dạy
+                </a>
+                <a href="{{ url_for('teacher_dashboard') }}"
+                   class="btn btn-outline-info btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-chart-line"></i> Thống kê
+                </a>
+                {% endif %}
 
-                    <!-- Dành cho Học viên -->
-                    {% if current_user.role.value == 'STUDENT' %}
-                    <a href="{{ url_for('my_enrolled_courses') }}" class="btn btn-outline-light btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-solid fa-graduation-cap"></i> Khóa học đã đăng ký
-                    </a>
-                    <a href="{{ url_for('my_certificates') }}" class="btn btn-outline-warning btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-solid fa-award"></i> Chứng chỉ của tôi
-                    </a>
-                    {% endif %}
+                <!-- Dành cho Học viên -->
+                {% if current_user.role.value == 'STUDENT' %}
+                <a href="{{ url_for('my_enrolled_courses') }}"
+                   class="btn btn-outline-light btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-graduation-cap"></i> Khóa học đã đăng ký
+                </a>
+                <a href="{{ url_for('my_certificates') }}"
+                   class="btn btn-outline-warning btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-award"></i> Chứng chỉ của tôi
+                </a>
 
-                    <!-- Gợi ý khóa học AI -->
-                    <a href="{{ url_for('view_recommended_courses') }}" class="btn btn-outline-light btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Gợi ý cho tôi
-                    </a>
 
-                    <!-- Trang cá nhân -->
-                    <a href="{{ url_for('profile_my_user') }}" class="btn btn-outline-primary btn-sm ms-2 d-inline-flex align-items-center gap-1">
-                        <i class="fa-regular fa-user"></i> Chào, {{ current_user.name }}!
-                    </a>
+                <!-- Gợi ý khóa học AI -->
+                <a href="{{ url_for('view_recommended_courses') }}"
+                   class="btn btn-outline-light btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Gợi ý của tôi
+                </a>
+                {% endif %}
+
+                <!-- Trang cá nhân -->
+                <a href="{{ url_for('profile_my_user') }}"
+                   class="btn btn-outline-primary btn-sm ms-2 d-inline-flex align-items-center gap-1">
+                    <i class="fa-regular fa-user"></i> Chào, {{ current_user.name }}!
+                </a>
                 {% else %}
-                    <a href="{{ url_for('login_my_user') }}" class="btn btn-outline-light btn-sm">
-                        <i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Đăng nhập
-                    </a>
+                <a href="{{ url_for('login_my_user') }}" class="btn btn-outline-light btn-sm">
+                    <i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Đăng nhập
+                </a>
                 {% endif %}
             </div>
         </div>

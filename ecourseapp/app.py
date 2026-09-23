@@ -205,6 +205,31 @@ def update_password():
 
     return render_template("change_password.html", user=current_user)
 
+@app.route('/tags/create', methods=['POST'])
+def create_tag_ajax():
+    if current_user.role != UserRole.TEACHER:
+        flash("Chỉ giảng viên mới có quyền tạo khóa học!", "error")
+        return redirect('/')
+
+    data = request.get_json(force=True)
+    name = (data or {}).get('name', '').strip()
+
+    if not name:
+        return jsonify({"error": "Tên tag không được để trống"}), 400
+    if len(name) > 80:
+        return jsonify({"error": "Tên tag quá dài (tối đa 80 ký tự)"}), 400
+
+    try:
+        tag, created = dao.find_or_create_tag(name)
+        return jsonify({
+            "id": tag.id,
+            "name": tag.name,
+            "created": created
+        })
+    except Exception as ex:
+        db.session.rollback()
+        print("Lỗi tạo tag:", ex)
+        return jsonify({"error": "Có lỗi xảy ra, vui lòng thử lại"}), 500
 
 @app.route('/courses')
 def get_all_courses():
@@ -355,6 +380,7 @@ def rate_course(course_id):
     if not raw_rating or not str(raw_rating).isdigit() or not (1 <= int(raw_rating) <= 5):
         flash("Vui lòng chọn mức đánh giá hợp lệ (từ 1 đến 5 sao)!", "error")
         return redirect(f'/courses/{course_id}')
+
 
     rating_value = int(raw_rating)
     rating, err = dao.add_or_update_rating(current_user.id, course_id, rating_value, comment)
@@ -640,6 +666,7 @@ def delete_chapter(course_id, chapter_id):
     if not current_user.is_authenticated:
         return redirect('/login')
 
+
     course = dao.get_course_by_id(course_id)
     if not course or not dao.is_course_owner(current_user, course):
         return redirect("/")
@@ -651,7 +678,6 @@ def delete_chapter(course_id, chapter_id):
 
     try:
         chapter.is_active = False
-
         for lesson in chapter.lessons:
             lesson.is_active = False
 
@@ -1085,10 +1111,10 @@ def send_ai_chat_message(room_id):
         )
         result = json.loads(response.text)
         reply_text = (result.get("reply") or "").strip() or "Xin lỗi, mình chưa có câu trả lời phù hợp."
-        course_ids = result.get("course_ids") or []
+        course_ids = list(dict.fromkeys(result.get("course_ids") or []))
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Lỗi khi gọi Gemini API: {e}"}), 500
+        return jsonify({"error": f"Chức năng chat với AI đang trong quá trình hoàn thiện, vui lòng thử lại sau."}), 500
 
     ai_msg = AIChatRoomMessage(
         ai_chat_room_id=room_id,
@@ -1127,6 +1153,7 @@ def send_ai_chat_message(room_id):
                     "category": c.category.name if c.category else "",
                     "price": c.price or 0,
                     "icon": "📘",
+                    "dismissed": False,
                 }
                 for c in valid_courses
             ],
@@ -1637,4 +1664,5 @@ def teacher_dashboard():
 
 
 if __name__ == '__main__':
+
     socketio.run(app, debug=True)

@@ -164,6 +164,26 @@ def get_all_tags():
     """Lấy toàn bộ danh sách thẻ tag đang hoạt động để giảng viên lựa chọn"""
     return models.Tag.query.filter_by(is_active=True).all()
 
+def find_or_create_tag(name):
+    """Tìm tag theo tên (không phân biệt hoa/thường, bỏ khoảng trắng thừa).
+    Nếu đã tồn tại -> tái sử dụng (kích hoạt lại nếu đang is_active=False),
+    không tạo trùng. Nếu chưa có -> tạo mới.
+    Trả về (tag, created: bool)."""
+    name = (name or "").strip()
+    if not name:
+        return None, False
+
+    existing = models.Tag.query.filter(func.lower(models.Tag.name) == name.lower()).first()
+    if existing:
+        if not existing.is_active:
+            existing.is_active = True
+            db.session.commit()
+        return existing, False
+
+    new_tag = models.Tag(name=name, is_active=True)
+    db.session.add(new_tag)
+    db.session.commit()
+    return new_tag, True
 
 def get_course_tag(course_id):
     course_tags = (
