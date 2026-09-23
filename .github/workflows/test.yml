@@ -1,0 +1,63 @@
+name: Flask E-Course CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, test]
+  pull_request:
+    branches: [ main, master, test]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: ecourse_test_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Create credentials directory and file
+      run: |
+        mkdir -p ecourseapp/credentials
+        cat << 'EOF' > ecourseapp/credentials/ai_api_key.json
+        ${{ secrets.AI_API_KEY_JSON }}
+        EOF
+
+    - name: Initialize Database Tables
+      env:
+        DATABASE_URL: mysql+pymysql://root:rootpassword@127.0.0.1:3306/ecourse_test_db?charset=utf8mb4
+      run: |
+        python -c "
+        import sys, os
+        sys.path.append(os.path.abspath('ecourseapp'))
+        from __init__ import app, db
+        import models
+        with app.app_context():
+            db.create_all()
+            print('Tạo bảng thành công!')
+        "
+
+    - name: Run Unit Tests
+      env:
+        DATABASE_URL: mysql+pymysql://root:rootpassword@127.0.0.1:3306/ecourse_test_db?charset=utf8mb4
+      run: |
+        python ecourseapp/test.py

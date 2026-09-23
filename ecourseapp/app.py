@@ -381,6 +381,7 @@ def rate_course(course_id):
         flash("Vui lòng chọn mức đánh giá hợp lệ (từ 1 đến 5 sao)!", "error")
         return redirect(f'/courses/{course_id}')
 
+
     rating_value = int(raw_rating)
     rating, err = dao.add_or_update_rating(current_user.id, course_id, rating_value, comment)
 
@@ -665,6 +666,7 @@ def delete_chapter(course_id, chapter_id):
     if not current_user.is_authenticated:
         return redirect('/login')
 
+
     course = dao.get_course_by_id(course_id)
     if not course or not dao.is_course_owner(current_user, course):
         return redirect("/")
@@ -676,7 +678,6 @@ def delete_chapter(course_id, chapter_id):
 
     try:
         chapter.is_active = False
-
         for lesson in chapter.lessons:
             lesson.is_active = False
 
@@ -1663,4 +1664,5 @@ def teacher_dashboard():
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+
+    socketio.run(app, debug=True)

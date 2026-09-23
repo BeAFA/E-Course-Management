@@ -14,7 +14,6 @@ database trước khi chạy lại để tránh lỗi trùng khoá (unique const
 """
 
 from datetime import datetime, timedelta
-
 from werkzeug.security import generate_password_hash
 
 from __init__ import app, db
@@ -32,19 +31,43 @@ def hash_password(raw_password: str) -> str:
     return generate_password_hash(raw_password.strip())
 
 
-# Ảnh và Video mặc định dùng CDN trực tiếp (Cloudinary & Unsplash)
-DEFAULT_AVATAR_PUBLIC_ID = "ecourse/avatars/default_avatar"
-DEFAULT_AVATAR_URL = "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
+# =========================================================================
+# TÀI NGUYÊN MEDIA CDN TRỰC TIẾP (AVATAR & ẢNH BÌA)
+# =========================================================================
+AVATARS = {
+    "admin": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop",
+    "teacher_1": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop",
+    "teacher_2": "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&auto=format&fit=crop",
+    "teacher_3": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop",
+    "student_1": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop",
+    "student_2": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop",
+    "student_3": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop",
+    "student_4": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop"
+}
 
-DEFAULT_COURSE_PUBLIC_ID = "ecourse/courses/default_course"
-DEFAULT_COURSE_URL = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop"
+COURSE_COVERS = {
+    "python": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop",
+    "flask": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop",
+    "react": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&auto=format&fit=crop",
+    "android": "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?w=600&auto=format&fit=crop",
+    "datascience": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop",
+    "ml": "https://images.unsplash.com/photo-1507146426996-ef05306b995a?w=600&auto=format&fit=crop",
+    "mysql": "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=600&auto=format&fit=crop",
+    "docker": "https://images.unsplash.com/photo-1605745341112-85968b19335b?w=600&auto=format&fit=crop"
+}
 
-DEFAULT_LESSON_IMG_PUBLIC_ID = "ecourse/lessons/default_lesson_img"
-DEFAULT_LESSON_IMG_URL = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&auto=format&fit=crop"
-
-# Video MP4 mẫu phát trực tiếp mượt mà từ Cloudinary
-DEFAULT_VIDEO_PUBLIC_ID = "ecourse/videos/sample_lesson_video"
-DEFAULT_VIDEO_URL = "https://res.cloudinary.com/demo/video/upload/v1687522511/samples/cld-sample-video.mp4"
+LESSON_COVERS = {
+    "setup": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop",
+    "syntax": "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=600&auto=format&fit=crop",
+    "structure": "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=600&auto=format&fit=crop",
+    "framework": "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&auto=format&fit=crop",
+    "database": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop",
+    "ui": "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=600&auto=format&fit=crop",
+    "mobile": "https://images.unsplash.com/photo-1526498460520-4c246339dccb?w=600&auto=format&fit=crop",
+    "analysis": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop",
+    "algorithm": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop",
+    "cloud": "https://images.unsplash.com/photo-1618401471353-b98aedd04e11?w=600&auto=format&fit=crop"
+}
 
 
 def seed():
@@ -56,28 +79,28 @@ def seed():
         users = [
             User(email="admin@ecourse.vn", password=hash_password("123456"),
                  name="Nguyễn Văn Admin", role=UserRole.ADMIN,
-                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id="ecourse/avatars/admin", img_url=AVATARS["admin"]),
             User(email="teacher.python@ecourse.vn", password=hash_password("123456"),
                  name="Trần Thị Hồng", major="Công nghệ thông tin", role=UserRole.TEACHER,
-                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id="ecourse/avatars/teacher1", img_url=AVATARS["teacher_1"]),
             User(email="teacher.web@ecourse.vn", password=hash_password("123456"),
                  name="Lê Minh Tuấn", major="Kỹ thuật phần mềm", role=UserRole.TEACHER,
-                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id="ecourse/avatars/teacher2", img_url=AVATARS["teacher_2"]),
             User(email="teacher.ai@ecourse.vn", password=hash_password("123456"),
                  name="Phạm Quốc Bảo", major="Khoa học dữ liệu", role=UserRole.TEACHER,
-                 img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 img_drive_id="ecourse/avatars/teacher3", img_url=AVATARS["teacher_3"]),
             User(email="student.an@ecourse.vn", password=hash_password("123456"),
                  name="Nguyễn Văn An", level=Level.JUNIOR, major="Công nghệ thông tin",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id="ecourse/avatars/student1", img_url=AVATARS["student_1"]),
             User(email="student.binh@ecourse.vn", password=hash_password("123456"),
                  name="Trần Thị Bình", level=Level.SENIOR, major="Hệ thống thông tin",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id="ecourse/avatars/student2", img_url=AVATARS["student_2"]),
             User(email="student.cuong@ecourse.vn", password=hash_password("123456"),
                  name="Lê Văn Cường", level=Level.MASTER, major="Khoa học máy tính",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id="ecourse/avatars/student3", img_url=AVATARS["student_3"]),
             User(email="student.dung@ecourse.vn", password=hash_password("123456"),
                  name="Phạm Thị Dung", level=Level.EXPERT, major="Trí tuệ nhân tạo",
-                 role=UserRole.STUDENT, img_drive_id=DEFAULT_AVATAR_PUBLIC_ID, img_url=DEFAULT_AVATAR_URL),
+                 role=UserRole.STUDENT, img_drive_id="ecourse/avatars/student4", img_url=AVATARS["student_4"]),
         ]
         db.session.add_all(users)
         db.session.commit()
@@ -114,28 +137,28 @@ def seed():
         courses = [
             Course(name="Lập trình Python cơ bản", price=299000, description="Khoá học Python cho người mới bắt đầu",
                    category_id=categories[0].id, teacher_id=teachers[0].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/python", img_url=COURSE_COVERS["python"]),
             Course(name="Flask - Xây dựng Web App", price=399000, description="Xây dựng ứng dụng web với Flask",
                    category_id=categories[0].id, teacher_id=teachers[0].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/flask", img_url=COURSE_COVERS["flask"]),
             Course(name="ReactJS từ Zero đến Hero", price=499000, description="Xây dựng giao diện với ReactJS",
                    category_id=categories[0].id, teacher_id=teachers[1].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/react", img_url=COURSE_COVERS["react"]),
             Course(name="Lập trình Android cơ bản", price=349000, description="Xây dựng ứng dụng Android với Java",
                    category_id=categories[1].id, teacher_id=teachers[1].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/android", img_url=COURSE_COVERS["android"]),
             Course(name="Nhập môn Khoa học dữ liệu", price=599000, description="Phân tích dữ liệu với Python",
                    category_id=categories[2].id, teacher_id=teachers[2].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/datascience", img_url=COURSE_COVERS["datascience"]),
             Course(name="Machine Learning cơ bản", price=799000, description="Các thuật toán học máy phổ biến",
                    category_id=categories[3].id, teacher_id=teachers[2].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1507146426996-ef05306b995a?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/ml", img_url=COURSE_COVERS["ml"]),
             Course(name="Thiết kế cơ sở dữ liệu MySQL", price=299000, description="Thiết kế và tối ưu CSDL quan hệ",
                    category_id=categories[4].id, teacher_id=teachers[0].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/mysql", img_url=COURSE_COVERS["mysql"]),
             Course(name="Docker & Kubernetes cơ bản", price=459000, description="Triển khai ứng dụng với container",
                    category_id=categories[5].id, teacher_id=teachers[1].id,
-                   img_drive_id=DEFAULT_COURSE_PUBLIC_ID, img_url="https://images.unsplash.com/photo-1605745341112-85968b19335b?w=600&auto=format&fit=crop"),
+                   img_drive_id="ecourse/courses/docker", img_url=COURSE_COVERS["docker"]),
         ]
         db.session.add_all(courses)
         db.session.commit()
@@ -194,38 +217,77 @@ def seed():
         db.session.add_all(chapters)
         db.session.commit()
 
-        # ================= LESSON =================
+        # ================= LESSON (VIDEO YOUTUBE CHUẨN TỪNG CHUYÊN ĐỀ) =================
         lessons = [
-            Lesson(chapter_id=chapters[0].id, title="Cài đặt Python & IDE", article="Hướng dẫn cài đặt Python và VS Code",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[0].id, title="Biến và kiểu dữ liệu", article="Các kiểu dữ liệu cơ bản trong Python",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[1].id, title="List và Tuple", article="Cách sử dụng List và Tuple",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[2].id, title="Cài đặt Flask", article="Tạo project Flask đầu tiên",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[3].id, title="Kết nối MySQL với Flask", article="Cấu hình SQLAlchemy",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[4].id, title="Tạo Component đầu tiên", article="Function Component trong React",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[5].id, title="Tạo Activity đầu tiên", article="Layout XML cơ bản",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[6].id, title="Đọc dữ liệu với Pandas", article="DataFrame và Series",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[7].id, title="Xây dựng mô hình hồi quy", article="Fit và predict với Scikit-learn",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
-            Lesson(chapter_id=chapters[9].id, title="Viết Dockerfile đầu tiên", article="Build image cho ứng dụng Flask",
-                   img_drive_id=DEFAULT_LESSON_IMG_PUBLIC_ID, img_url=DEFAULT_LESSON_IMG_URL,
-                   video_drive_id=DEFAULT_VIDEO_PUBLIC_ID, video_url=DEFAULT_VIDEO_URL),
+            # 1. Cài đặt Python & VS Code
+            Lesson(chapter_id=chapters[0].id, title="Cài đặt Python & IDE", 
+                   article="Hướng dẫn tải và cài đặt môi trường Python 3 cùng Visual Studio Code chi tiết cho người mới bắt đầu.",
+                   img_drive_id="ecourse/lessons/py_setup", img_url=LESSON_COVERS["setup"],
+                   video_drive_id="yt_py_setup", 
+                   video_url="https://www.youtube.com/watch?v=YYXdXT2l-Gg"),
+            
+            # 2. Biến và kiểu dữ liệu Python
+            Lesson(chapter_id=chapters[0].id, title="Biến và kiểu dữ liệu", 
+                   article="Tìm hiểu các kiểu dữ liệu cơ bản: số nguyên, số thực, chuỗi ký tự và kiểu boolean trong Python.",
+                   img_drive_id="ecourse/lessons/py_syntax", img_url=LESSON_COVERS["syntax"],
+                   video_drive_id="yt_py_syntax", 
+                   video_url="https://www.youtube.com/watch?v=khKv-8q7YmY"),
+            
+            # 3. List và Tuple trong Python
+            Lesson(chapter_id=chapters[1].id, title="List và Tuple", 
+                   article="Cấu trúc dữ liệu danh sách (List) và bộ dữ liệu không thay đổi (Tuple) cùng các hàm tiện ích.",
+                   img_drive_id="ecourse/lessons/py_struct", img_url=LESSON_COVERS["structure"],
+                   video_drive_id="yt_py_struct", 
+                   video_url="https://www.youtube.com/watch?v=W8KRzm-HUcc"),
+            
+            # 4. Bắt đầu với Flask Framework
+            Lesson(chapter_id=chapters[2].id, title="Cài đặt Flask", 
+                   article="Khởi tạo môi trường ảo venv, cài đặt Flask framework và xây dựng route Hello World đầu tiên.",
+                   img_drive_id="ecourse/lessons/flask_init", img_url=LESSON_COVERS["framework"],
+                   video_drive_id="yt_flask_init", 
+                   video_url="https://www.youtube.com/watch?v=Z1RJmh_Oreq"),
+            
+            # 5. Kết nối CSDL với Flask & SQLAlchemy
+            Lesson(chapter_id=chapters[3].id, title="Kết nối MySQL với Flask", 
+                   article="Cấu hình kết nối cơ sở dữ liệu MySQL thông qua Flask-SQLAlchemy và định nghĩa schema model.",
+                   img_drive_id="ecourse/lessons/flask_db", img_url=LESSON_COVERS["database"],
+                   video_drive_id="yt_flask_db", 
+                   video_url="https://www.youtube.com/watch?v=44PvX0Yv368"),
+            
+            # 6. ReactJS cơ bản - Component & JSX
+            Lesson(chapter_id=chapters[4].id, title="Tạo Component đầu tiên", 
+                   article="Cấu trúc của React Function Component, cú pháp JSX và cách tổ chức luồng giao diện với Props.",
+                   img_drive_id="ecourse/lessons/react_comp", img_url=LESSON_COVERS["ui"],
+                   video_drive_id="yt_react_comp", 
+                   video_url="https://www.youtube.com/watch?v=bMknfKXIFA8"),
+            
+            # 7. Android Studio - Tạo Activity & UI XML
+            Lesson(chapter_id=chapters[5].id, title="Tạo Activity đầu tiên", 
+                   article="Tạo project Android cơ bản, làm quen với giao diện kéo thả XML và chạy ứng dụng trên máy ảo.",
+                   img_drive_id="ecourse/lessons/android_act", img_url=LESSON_COVERS["mobile"],
+                   video_drive_id="yt_android_act", 
+                   video_url="https://www.youtube.com/watch?v=fis26HvvDA4"),
+            
+            # 8. Phân tích dữ liệu với Pandas
+            Lesson(chapter_id=chapters[6].id, title="Đọc dữ liệu với Pandas", 
+                   article="Sử dụng Pandas DataFrame để đọc file dữ liệu CSV, lọc dữ liệu và xử lý các giá trị rỗng.",
+                   img_drive_id="ecourse/lessons/pandas_read", img_url=LESSON_COVERS["analysis"],
+                   video_drive_id="yt_pandas_read", 
+                   video_url="https://www.youtube.com/watch?v=vmEHCJofslg"),
+            
+            # 9. Machine Learning - Mô hình Hồi quy tuyến tính
+            Lesson(chapter_id=chapters[7].id, title="Xây dựng mô hình hồi quy", 
+                   article="Ứng dụng thuật toán Linear Regression với thư viện Scikit-Learn để dự đoán dữ liệu định lượng.",
+                   img_drive_id="ecourse/lessons/ml_reg", img_url=LESSON_COVERS["algorithm"],
+                   video_drive_id="yt_ml_reg", 
+                   video_url="https://www.youtube.com/watch?v=7eh4d6sabA0"),
+            
+            # 10. Docker cơ bản cho lập trình viên
+            Lesson(chapter_id=chapters[9].id, title="Viết Dockerfile đầu tiên", 
+                   article="Khái niệm Image, Container và thực hành viết Dockerfile đóng gói ứng dụng web hoàn chỉnh.",
+                   img_drive_id="ecourse/lessons/docker_file", img_url=LESSON_COVERS["cloud"],
+                   video_drive_id="yt_docker_file", 
+                   video_url="https://www.youtube.com/watch?v=fqMOX6JJhGo"),
         ]
         db.session.add_all(lessons)
         db.session.commit()
@@ -265,13 +327,13 @@ def seed():
         ]
 
         questions = []
-        choices = []
         for test, content, options, correct_index in question_bank:
             q = Question(test_id=test.id, content=content)
             questions.append(q)
         db.session.add_all(questions)
         db.session.commit()
 
+        choices = []
         for (test, content, options, correct_index), q in zip(question_bank, questions):
             for idx, option_text in enumerate(options):
                 choices.append(
@@ -280,19 +342,6 @@ def seed():
         db.session.add_all(choices)
         db.session.commit()
 
-        # ================= USER TEST =================
-        user_tests = [
-            UserTest(user_id=students[0].id, test_id=tests[0].id, score=8.5),
-            UserTest(user_id=students[0].id, test_id=tests[1].id, score=7.0),
-            UserTest(user_id=students[1].id, test_id=tests[2].id, score=9.0),
-            UserTest(user_id=students[1].id, test_id=tests[3].id, score=6.5),
-            UserTest(user_id=students[2].id, test_id=tests[4].id, score=10.0),
-            UserTest(user_id=students[2].id, test_id=tests[5].id, score=8.0),
-            UserTest(user_id=students[3].id, test_id=tests[6].id, score=7.5),
-            UserTest(user_id=students[3].id, test_id=tests[7].id, score=9.5),
-        ]
-        db.session.add_all(user_tests)
-        db.session.commit()
 
         # ================= CHAT ROOM =================
         chat_rooms = [
@@ -418,14 +467,14 @@ def seed():
         db.session.commit()
 
         print("Seed dữ liệu mẫu thành công!")
-        print(f"- {len(users)} users")
+        print(f"- {len(users)} users (Kèm avatar chuẩn)")
         print(f"- {len(categories)} categories")
         print(f"- {len(tags)} tags")
-        print(f"- {len(courses)} courses")
+        print(f"- {len(courses)} courses (Kèm ảnh bìa đúng chủ đề)")
         print(f"- {len(ratings)} ratings")
         print(f"- {len(course_tags)} course_tags")
         print(f"- {len(chapters)} chapters")
-        print(f"- {len(lessons)} lessons (đã kèm video MP4 trực tiếp)")
+        print(f"- {len(lessons)} lessons (Kèm video YouTube chuẩn nội dung bài học)")
         print(f"- {len(tests)} tests")
         print(f"- {len(questions)} questions / {len(choices)} choices")
         print(f"- {len(user_tests)} user_tests")

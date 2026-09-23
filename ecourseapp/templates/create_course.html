@@ -22,13 +22,13 @@
         {% endif %}
 
         <form method="POST"
-              action="{{ url_for('update_course', course_id=course.id) if course else url_for('create_course') }}"
-              class="course-form" enctype="multipart/form-data">
+            action="{{ url_for('update_course', course_id=course.id) if course else url_for('create_course') }}"
+            class="course-form" enctype="multipart/form-data">
 
             <div class="form-group">
                 <label for="name">Tên khóa học <span class="required">*</span></label>
                 <input type="text" id="name" name="name" value="{{ course.name if course else '' }}"
-                       placeholder="Ví dụ: Lập trình Python" required>
+                    placeholder="Ví dụ: Lập trình Python" required>
             </div>
 
             <div class="form-group">
@@ -46,13 +46,39 @@
             <div class="form-group">
                 <label for="price">Giá tiền (VNĐ)</label>
                 <input type="number" id="price" name="price" min="0" step="1000"
-                       value="{{ course.price if course else '' }}" placeholder="Ví dụ: 500000 (Để 0 nếu miễn phí)">
+                    value="{{ course.price if course else '' }}" placeholder="Ví dụ: 500000 (Để 0 nếu miễn phí)">
             </div>
 
             <div class="form-group">
                 <label for="description">Mô tả khóa học</label>
                 <textarea id="description" name="description" rows="6"
-                          placeholder="Giới thiệu nội dung, mục tiêu và yêu cầu đầu vào của khóa học...">{{ course.description if course else '' }}</textarea>
+                    placeholder="Giới thiệu nội dung, mục tiêu và yêu cầu đầu vào của khóa học...">{{ course.description if course else '' }}</textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="fa-solid fa-tags text-primary me-1"></i> Thẻ môn học / Tags <span
+                        class="text-danger">(*)</span>
+                </label>
+                <div class="text-muted small mb-2">Chọn ít nhất một chủ đề phù hợp:</div>
+
+                <div class="d-flex flex-wrap gap-2 p-3 border rounded-3 bg-light"
+                    style="max-height: 180px; overflow-y: auto;">
+                    {% if tags and tags|length > 0 %}
+                    {% for tag in tags %}
+                    <div class="form-check-inline m-0">
+                        <input class="btn-check" type="checkbox" name="tag_ids" id="tag_{{ tag.id }}"
+                            value="{{ tag.id }}" autocomplete="off" {% if current_tag_ids and tag.id in current_tag_ids
+                            %}checked{% endif %}>
+                        <label class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1" for="tag_{{ tag.id }}">
+                            # {{ tag.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <span class="text-muted fst-italic">Chưa có tag nào trong hệ thống.</span>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="mb-4 tag-section">
@@ -93,15 +119,15 @@
                 <div class="img-preview">
                     {# Ưu tiên dùng thẳng course.img_url #}
                     <img src="{{ course.img_url or ('https://lh3.googleusercontent.com/d/' ~ course.img_drive_id) }}"
-                         alt="Ảnh hiện tại" class="preview-thumb"
-                         style="max-width: 280px; height: auto; border-radius: 8px; display: block; margin-bottom: 8px;"
-                         onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop';">
+                        alt="Ảnh hiện tại" class="preview-thumb"
+                        style="max-width: 280px; height: auto; border-radius: 8px; display: block; margin-bottom: 8px;"
+                        onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop';">
                 </div>
                 {% endif %}
                 <div class="img-preview" id="new-img-preview" style="display: none;">
                     <p class="preview-label">Ảnh sau khi thay đổi</p>
                     <img id="new-img-thumb" class="preview-thumb" src="" alt="Ảnh mới"
-                         style="max-width: 280px; height: auto; border-radius: 8px;">
+                        style="max-width: 280px; height: auto; border-radius: 8px;">
                 </div>
                 <input type="file" id="img" name="img" accept="image/*" {% if not course %}required{% endif %}>
             </div>
