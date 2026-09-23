@@ -1,0 +1,97 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="test-detail-wrapper">
+    <!-- Header Banner -->
+    <div class="test-detail-header">
+        <div class="header-content">
+            <h2><i class="fa-solid fa-file-circle-check"></i> {{ test.name }}</h2>
+            <div class="test-detail-breadcrumb">
+                <span><i class="fa-solid fa-graduation-cap"></i> Khóa: <strong>{{ test.chapter.course.name }}</strong></span>
+                <span class="dot-separator">•</span>
+                <span><i class="fa-solid fa-folder-open"></i> Chương: <strong>{{ test.chapter.name }}</strong></span>
+            </div>
+        </div>
+        <a href="{{ url_for('course_detail', course_id=test.chapter.course_id) }}" class="btn-back-nav">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại khóa học
+        </a>
+    </div>
+
+    <!-- Thông tin tổng quan (Thống kê thẻ) -->
+    <div class="overview-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-soft text-primary">
+                <i class="fa-solid fa-list-ol"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Tổng số câu hỏi</span>
+                <span class="stat-value">{{ test.questions|length }} câu</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon bg-green-soft text-success">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Thang điểm tối đa</span>
+                <span class="stat-value">{{ test.total_score or 10.0 }} điểm</span>
+            </div>
+        </div>
+
+        <div class="stat-card stat-card-desc">
+            <div class="stat-icon bg-purple-soft text-purple">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Mô tả bài thi</span>
+                <span class="stat-desc-text">{{ test.description or 'Không có mô tả chi tiết cho bài thi này.' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danh sách câu hỏi chi tiết -->
+    <div class="section-title-wrap">
+        <h3><i class="fa-solid fa-layer-group text-primary me-2"></i>Chi tiết các câu hỏi & đáp án chuẩn</h3>
+    </div>
+
+    <div class="questions-list">
+        {% for q in test.questions %}
+        <div class="question-box">
+            <div class="question-header">
+                <span class="q-number-pill">Câu {{ loop.index }}</span>
+                <span class="q-content-text">{{ q.content }}</span>
+            </div>
+
+            <div class="choices-container">
+                {% for c in q.choices %}
+                <div class="choice-row {% if c.is_true %}is-correct-choice{% endif %}">
+                    <span class="choice-badge {% if c.is_true %}badge-correct{% else %}badge-normal{% endif %}">
+                        {% if c.is_true %}
+                            <i class="fa-solid fa-check"></i> ĐÁP ÁN ĐÚNG
+                        {% else %}
+                            <i class="fa-regular fa-circle"></i>
+                        {% endif %}
+                    </span>
+                    <span class="choice-text {% if c.is_true %}text-correct-bold{% endif %}">
+                        {{ c.answer }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state-box">
+            <i class="fa-solid fa-file-lines empty-icon"></i>
+            <h4>Bài thi này hiện chưa có câu hỏi nào!</h4>
+            <p>Vui lòng cập nhật hoặc thêm câu hỏi mới cho đề thi này.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

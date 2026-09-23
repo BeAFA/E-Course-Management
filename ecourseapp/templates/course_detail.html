@@ -1,23 +1,98 @@
 {% extends 'layout/base.html' %}
+
 {% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/course_detail.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/btn_custom.css') }}">
+<style>
+    .btn-edit-course {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #ffffff;
+        color: #1e293b;
+        border: 1px solid #cbd5e1;
+        padding: 9px 18px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-edit-course:hover {
+        background: #f1f5f9;
+        color: #2563eb;
+        border-color: #93c5fd;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .banner-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .btn-icon-edit-banner {
+        color: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 15px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-icon-edit-banner:hover {
+        background: #ffffff;
+        color: #2563eb;
+    }
+</style>
 {% endblock %}
+
 {% block content %}
 <section class="course-banner">
-    <h1 class="course-title">{{ course.name | default('Tên khóa học') }}</h1>
+    <div class="banner-title-wrap">
+        <h1 class="course-title" style="margin: 0;">{{ course.name | default('Tên khóa học') }}</h1>
+        {% if is_owner %}
+        <a href="{{ url_for('update_course', course_id=course.id) }}" class="btn-icon-edit-banner"
+            title="Chỉnh sửa thông tin khóa học">
+            <i class="fa-solid fa-pen-to-square"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if is_enrolled%}
     <div class="progress-box">
         <span>Tiến độ hoàn thành:</span>
         <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="courseProgressFill"
-                 style="width: {{ progress | default('35') }}%;"></div>
+            <div class="progress-bar-fill" id="courseProgressFill" data-progress="{{ progress | default(0) }}"></div>
         </div>
-        <span class="progress-text" id="courseProgressText">{{ progress | default('35') }}%</span>
+        <span class="progress-text" id="courseProgressText">{{ progress | default(0) }}%</span>
     </div>
+    {% else %}
+    <div class="price-box">
+        <span>Giá khóa học:</span>
+        <span class="price-text">
+            {% if course.price and course.price > 0 %}
+            {{ "{:,.0f}".format(course.price).replace(',', '.') }} ₫
+            {% else %}
+            Miễn phí
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
 </section>
+
 {% if err_msg %}
 <div class="alert alert-danger">{{ err_msg }}</div>
 {% endif %}
+
 <main class="main-container">
     <section class="course-intro-section">
         <div class="intro-left">
@@ -26,14 +101,47 @@
                 {{ course.description | default('Hiện chưa có mô tả chi tiết cho khóa học này.') }}
             </p>
         </div>
-        <div class="intro-right">
-            <button type="button" class="btn-ask-teacher" id="btnAskTeacher">
-                <i class="fa-regular fa-comment-dots"></i> Hỏi đáp với giảng viên
-            </button>
+        <div class="intro-right" style="display: flex; gap: 10px; align-items: center;">
+            {% if current_user.is_authenticated %}
+            {% if is_owner %}
+            <a href="{{ url_for('update_course', course_id=course.id) }}" class="btn-edit-course">
+                <i class="fa-solid fa-pen-to-square text-primary"></i> Chỉnh sửa khóa học
+            </a>
+            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher">
+                <i class="fa-regular fa-comments"></i> Hỏi đáp với học viên
+            </a>
+            {% elif is_enrolled %}
+            <a href="{{ url_for('join_course_chat', course_id=course.id) }}" class="btn-ask-teacher">
+                <i class="fa-regular fa-comment-dots"></i> Vào phòng chat với giảng viên
+            </a>
+            {% else %}
+            <a href="{{ url_for('checkout', course_id=course.id) }}" class="btn-enroll-now">
+                <i class="fa-solid fa-cart-shopping"></i> Đăng ký học ngay
+            </a>
+            {% endif %}
+            {% else %}
+            <a href="{{ url_for('login_my_user') }}" class="btn-ask-teacher" title="Bạn cần đăng nhập để trò chuyện">
+                <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập để đăng ký
+            </a>
+            {% endif %}
         </div>
     </section>
 
     <div class="course-modules" id="courseModules">
+        {% if not is_enrolled and not is_owner %}
+        <div class="locked-course-notice">
+            <i class="fa-solid fa-lock" style="font-size: 2rem; color: #475569;"></i>
+            <div class="locked-text">
+                <h3>Nội dung khóa học đã bị khóa</h3>
+                <p>Vui lòng đăng ký để có thể xem chi tiết bài giảng và tham gia làm bài kiểm tra.</p>
+            </div>
+            <a href="{{ url_for('checkout', course_id=course.id) }}" class="btn-enroll-now" style="margin: 0;">
+                Đăng ký ngay
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- KHỐI 1: BÀI GIẢNG / CHƯƠNG -->
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
@@ -41,45 +149,72 @@
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
                 {% if is_owner %}
-                <a href="{{url_for('add_chapters', course_id=course.id)}}" class="btn-custom">
-                    <i class="fa-solid fa-user-plus"></i> Tạo chương mới
+                <a href="{{ url_for('add_chapters', course_id=course.id) }}" class="btn-custom"
+                    style="text-decoration: none;">
+                    <i class="fa-solid fa-plus"></i> Tạo chương mới
                 </a>
                 {% endif %}
             </div>
             <div class="module-body">
+                {% set active_chapters = namespace(count=0) %}
                 {% if course.chapters %}
                 {% for chapter in course.chapters %}
-                <div class="lesson-item">
-                    <div style="display: flex;">
-                        <a href="{{url_for('lessons', chapter_id=chapter.id)}}" class="lesson-link"
-                           style="margin-right:5px;" data-type="doc"
-                           data-title="{{ chapter.name }}">
-                            {{ loop.index }}.{{ chapter.name }}
+                {% if chapter.is_active %}
+                {% set active_chapters.count = active_chapters.count + 1 %}
+                <div class="lesson-item"
+                    style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        {% if is_enrolled or is_owner %}
+                        <a href="{{ url_for('lessons', chapter_id=chapter.id) }}" class="lesson-link"
+                            style="font-weight: 600;">
+                            <i class="fa-regular fa-folder-open text-primary me-1"></i> {{ active_chapters.count }}. {{
+                            chapter.name }}
                         </a>
-                        {% if is_owner %}
-                        <a href="{{url_for('update_chapters', course_id=course.id, chapter_id=chapter.id)}}"
-                           class="edit-btn" title="Chỉnh sửa">
-                            &#128393;
-                        </a>
+                        {% else %}
+                        <span class="lesson-link locked" style="color: #64748b;">
+                            {{ active_chapters.count }}. {{ chapter.name }} <i class="fa-solid fa-lock ms-1"
+                                style="font-size: 0.8rem;"></i>
+                        </span>
+                        {% endif %}
+
+                        {% if chapter.description %}
+                        <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
+                            {{ chapter.description }}
+                        </span>
+                        {% else %}
+                        <span class="status-badge video">Chương học</span>
                         {% endif %}
                     </div>
-                    {% if chapter.description %}
-                    <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                                {{ chapter.description }}
-                            </span>
-                    {% else %}
-                    <span class="status-badge video">Bài học</span>
+
+                    {% if is_owner %}
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <a href="{{ url_for('update_chapters', course_id=course.id, chapter_id=chapter.id) }}"
+                            class="btn btn-sm btn-outline-primary" title="Sửa tên/mô tả chương">
+                            <i class="fa-solid fa-pen"></i> Sửa
+                        </a>
+                        <form action="{{ url_for('delete_chapter', course_id=course.id, chapter_id=chapter.id) }}"
+                            method="POST" style="display: inline; margin: 0;"
+                            onsubmit="return confirm('Bạn có chắc muốn xóa mềm chương {{ chapter.name }}? Các bài học và bài thi trong chương cũng sẽ ngưng hoạt động.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa chương này">
+                                <i class="fa-solid fa-trash-can"></i> Xóa
+                            </button>
+                        </form>
+                    </div>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endfor %}
-                {% else %}
+                {% endif %}
+
+                {% if active_chapters.count == 0 %}
                 <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-                    Hiện chưa có bài giảng được đăng lên
+                    Hiện chưa có chương học nào đang hoạt động
                 </div>
                 {% endif %}
             </div>
         </div>
 
+        <!-- KHỐI 2: BÀI TẬP / BÀI KIỂM TRA -->
         <div class="module-card">
             <div class="module-header" data-toggle="accordion">
                 <span class="module-title">
@@ -87,36 +222,198 @@
                 </span>
                 <i class="fa-solid fa-caret-down module-toggle-icon"></i>
                 {% if is_owner %}
-                <a href="#" class="btn-custom">
-                    <i class="fa-solid fa-user-plus"></i> Tạo bài thi
+                {% if course.chapters and course.chapters|length > 0 %}
+                <a href="{{ url_for('add_test', course_id=course.id) }}" class="btn-custom"
+                    style="text-decoration: none;">
+                    <i class="fa-solid fa-plus"></i> Tạo bài thi mới
                 </a>
+                {% else %}
+                <a href="{{ url_for('add_chapters', course_id=course.id) }}" class="btn-custom"
+                    title="Vui lòng tạo chương trước khi tạo bài thi" style="text-decoration: none;">
+                    <i class="fa-solid fa-plus"></i> Tạo chương trước
+                </a>
+                {% endif %}
                 {% endif %}
             </div>
             <div class="module-body">
-                {% set has_test = course.chapters | selectattr('test') | list %}
-                {% if has_test %}
-                {% for chapter in has_test %}
-                <div class="lesson-item">
-                    <a class="lesson-link" data-type="doc" data-title="{{ chapter.test }}">
-                        {{ loop.index }}.{{ chapter.name }}: {{ chapter.test }}
-                    </a>
+                {% set active_tests = namespace(count=0) %}
+                {% if course.chapters %}
+                {% for chapter in course.chapters %}
+                {% if chapter.is_active %}
+                {% for test in chapter.tests %}
+                {% if test.is_active %}
+                {% set active_tests.count = active_tests.count + 1 %}
+                <div class="lesson-item"
+                    style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        {% if is_enrolled or is_owner %}
+                        {% if is_owner %}
+                        <a href="{{ url_for('test_detail', test_id=test.id) }}" class="lesson-link"
+                            title="Xem chi tiết đề thi">
+                            <i class="fa-solid fa-file-pen me-1 text-primary"></i> <strong>{{ test.name }}</strong>
+                            <small style="color: #64748b; font-size: 0.85em; font-weight: normal;"> (Thuộc: {{
+                                chapter.name }})</small>
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('take_test', test_id=test.id) }}" class="lesson-link"
+                            title="Vào làm bài thi">
+                            <i class="fa-solid fa-pen-to-square me-1 text-primary"></i> <strong>{{ test.name }}</strong>
+                            <small style="color: #64748b; font-size: 0.85em; font-weight: normal;"> (Thuộc: {{
+                                chapter.name }})</small>
+                        </a>
+                        {% endif %}
+                        {% else %}
+                        <span class="lesson-link locked">
+                            <strong>{{ test.name }}</strong> <small style="color: #64748b; font-size: 0.85em;">(Thuộc:
+                                {{ chapter.name }})</small>
+                            <i class="fa-solid fa-lock ms-1" style="font-size: 0.8rem;"></i>
+                        </span>
+                        {% endif %}
 
-                    {% if chapter.test.description %}
-                    <span class="status-badge video" style="font-weight: normal; font-size: 0.8rem;">
-                {{ chapter.test.description }}
-            </span>
-                    {% else %}
-                    <span class="status-badge video">Bài học</span>
-                    {% endif %}
+                        <span class="badge bg-light text-dark border ms-2" style="font-size: 11px; padding: 4px 8px;">
+                            Thang điểm: {{ test.total_score or 10 }}
+                        </span>
+
+                        <!-- HUY HIỆU ĐÃ HOÀN THÀNH BÀI THI -->
+                        {% if is_enrolled and test.id in completed_test_ids %}
+                        <span class="badge bg-success-subtle text-success border border-success ms-1"
+                            style="font-size: 11px; padding: 4px 8px;">
+                            <i class="fa-solid fa-circle-check"></i> Đã hoàn thành
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        {% if is_owner %}
+                        <a href="{{ url_for('clone_test', test_id=test.id) }}" class="btn btn-sm btn-outline-success"
+                            style="font-size: 12px; padding: 3px 8px;" title="Nhân bản bài thi sang chương khác">
+                            <i class="fa-solid fa-copy"></i> Nhân bản
+                        </a>
+                        <form action="{{ url_for('delete_test', test_id=test.id) }}" method="POST"
+                            style="display: inline; margin: 0;"
+                            onsubmit="return confirm('Bạn có chắc muốn xóa mềm bài thi này khỏi chương {{ chapter.name }}?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                style="font-size: 12px; padding: 3px 8px;" title="Xóa bài thi">
+                                <i class="fa-solid fa-trash-can"></i> Xóa
+                            </button>
+                        </form>
+                        {% else %}
+                        {% if is_enrolled %}
+                        <a href="{{ url_for('take_test', test_id=test.id) }}" class="btn btn-sm btn-primary"
+                            style="font-size: 13px;">
+                            Làm bài
+                        </a>
+                        {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
+                {% endif %}
                 {% endfor %}
-                {% else %}
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+
+                {% if active_tests.count == 0 %}
                 <div class="lesson-item" style="justify-content: center; color: #64748b; font-style: italic;">
-                    Hiện chưa có bài thi được đăng lên
+                    Hiện chưa có bài thi nào đang hoạt động
                 </div>
                 {% endif %}
             </div>
         </div>
+
+        <!-- ================= KHU VỰC ĐÁNH GIÁ KHÓA HỌC ================= -->
+        <div class="card border-0 shadow-sm rounded-4 p-4 mt-4 bg-white">
+            <!-- Header: Điểm trung bình & Tổng số lượt rate -->
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <div>
+                    <h4 class="fw-bold mb-1"><i class="fa-solid fa-star text-warning me-2"></i>Đánh giá từ học viên</h4>
+                    <div class="text-muted small">Phản hồi thực tế từ những học viên đã tham gia khóa học</div>
+                </div>
+                <div class="text-end">
+                    <div class="fs-3 fw-bold text-dark lh-1">
+                        {{ rating_stats.avg_rating }} <span class="fs-6 text-muted">/ 5</span>
+                    </div>
+                    <div class="text-warning small my-1">
+                        {% for i in range(1, 6) %}
+                        <i class="fa-{{ 'solid' if i <= rating_stats.avg_rating else 'regular' }} fa-star"></i>
+                        {% endfor %}
+                    </div>
+                    <span class="text-muted small">({{ rating_stats.rating_count }} lượt đánh giá)</span>
+                </div>
+            </div>
+
+            <!-- Form đánh giá: Chỉ hiển thị khi học viên ĐÃ ghi danh vào khóa học -->
+            {% if current_user.is_authenticated and is_enrolled %}
+            <div class="bg-light p-3 p-md-4 rounded-3 mb-4 border">
+                <h6 class="fw-bold text-dark mb-2">
+                    {{ "Chỉnh sửa đánh giá của bạn" if user_rating else "Gửi đánh giá của bạn về khóa học" }}
+                </h6>
+                <form action="{{ url_for('rate_course', course_id=course.id) }}" method="POST">
+                    <div class="mb-2">
+                        <label class="form-label small text-muted d-block mb-1">Mức độ hài lòng của bạn:</label>
+                        <div class="star-rating-box">
+                            {% for star in [5, 4, 3, 2, 1] %}
+                            <input type="radio" id="star_{{ star }}" name="rating" value="{{ star }}" {% if (user_rating
+                                and user_rating.rating==star) or (not user_rating and star==5) %}checked{% endif %}>
+                            <label for="star_{{ star }}" title="{{ star }} sao">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="comment" class="form-label small text-muted mb-1">Nhận xét chi tiết (tùy
+                            chọn):</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="3"
+                            placeholder="Chia sẻ cảm nhận, chất lượng giảng dạy hoặc nội dung khóa học...">{{ user_rating.comment if user_rating else '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">
+                        {{ "Cập nhật đánh giá" if user_rating else "Gửi đánh giá" }}
+                    </button>
+                </form>
+            </div>
+            {% elif not current_user.is_authenticated %}
+            <div class="alert alert-info py-2 px-3 small rounded-3 mb-3">
+                <i class="fa-solid fa-circle-info me-1"></i> Vui lòng <a href="{{ url_for('login_my_user') }}"
+                    class="alert-link">đăng nhập</a> và đăng ký khóa học để viết nhận xét.
+            </div>
+            {% endif %}
+
+            <!-- Danh sách đánh giá -->
+            <div class="reviews-list">
+                {% if ratings and ratings|length > 0 %}
+                {% for r in ratings %}
+                <div class="review-item d-flex gap-3">
+                    <div class="review-avatar">
+                        {{ r.user.name[:1] | upper if r.user.name else 'U' }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-dark">{{ r.user.name }}</strong>
+                            <span class="text-muted" style="font-size: 12px;">
+                                {{ r.updated_date.strftime('%d/%m/%Y') if r.updated_date else '' }}
+                            </span>
+                        </div>
+                        <div class="text-warning small mb-2">
+                            {% for i in range(1, 6) %}
+                            <i class="fa-{{ 'solid' if i <= r.rating else 'regular' }} fa-star"></i>
+                            {% endfor %}
+                        </div>
+                        <p class="text-secondary mb-0" style="font-size: 14px; line-height: 1.5;">
+                            {{ r.comment if r.comment else 'Học viên không để lại nhận xét bằng chữ.' }}
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4 text-muted fst-italic">
+                    Khóa học chưa có đánh giá nào. Hãy là người đầu tiên trải nghiệm và đánh giá nhé!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        
     </div>
 </main>
 
@@ -126,6 +423,7 @@
     </button>
 </div>
 {% endblock %}
+
 {% block js %}
 <script src="{{ url_for('static', filename='js/course_detail.js') }}"></script>
 {% endblock %}

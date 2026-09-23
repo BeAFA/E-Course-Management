@@ -1,0 +1,93 @@
+{% extends 'layout/base.html' %}
+
+{% block content %}
+<div class="enrolled-history-container" style="max-width: 1100px; margin: 2rem auto 4rem auto; padding: 0 1rem;">
+    <!-- Tiêu đề căn giữa -->
+    <h1 style="font-size: 2rem; font-weight: 500; color: #2b2b2b; margin: 0 0 2.5rem 0; text-align: center;">
+        Lịch sử đăng ký
+    </h1>
+
+    {% if courses and courses|length > 0 %}
+    <!-- Bảng danh sách khóa học đăng ký -->
+    <div style="overflow-x: auto; background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border-radius: 4px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.92rem; border: 1.5px solid #4a4a4a;">
+            <thead>
+                <tr style="background-color: #3f3f3f; color: #ffffff;">
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 22%;">Tên</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 14%;">Loại</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 18%;">Tag</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 26%;">Mô tả</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 10%;">Giá (đ)</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 10%;">Ngày đăng ký</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in courses %}
+                {% set course = item.data %}
+                <!-- Click vào bất kỳ ô nào trên dòng đều nhảy vào khóa học -->
+                <tr style="border-bottom: 1px solid #4a4a4a; cursor: pointer; transition: background 0.15s;" 
+                    onclick="window.location.href='{{ url_for('course_detail', course_id=course.id) }}';"
+                    onmouseover="this.style.background='#f1f5f9'" 
+                    onmouseout="this.style.background='#ffffff'">
+                    
+                    <!-- Cột Tên -->
+                    <td style="padding: 14px 12px; border: 1px solid #4a4a4a; font-weight: 600; text-align: center;">
+                        <a href="{{ url_for('course_detail', course_id=course.id) }}" 
+                           style="color: #2563eb; text-decoration: none;" 
+                           onmouseover="this.style.textDecoration='underline'" 
+                           onmouseout="this.style.textDecoration='none'">
+                            {{ course.name }}
+                        </a>
+                    </td>
+                    
+                    <!-- Cột Loại / Danh mục -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #334155;">
+                        {{ course.category.name if course.category else 'Khóa học' }}
+                    </td>
+
+                    <!-- Cột Tag -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #475569; font-size: 0.88rem;">
+                        {% if course.course_tags and course.course_tags|length > 0 %}
+                            {% for ct in course.course_tags %}
+                                #{{ ct.tag.name }}{{ ', ' if not loop.last else '' }}
+                            {% endfor %}
+                        {% else %}
+                            <span style="color: #94a3b8;">--</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Cột Mô tả -->
+                    <td style="padding: 14px 12px; border: 1px solid #4a4a4a; text-align: left; color: #475569; font-size: 0.88rem; line-height: 1.4;">
+                        {{ course.description | striptags | truncate(110) if course.description else 'Chưa có mô tả chi tiết.' }}
+                    </td>
+
+                    <!-- Cột Giá -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #1e293b; font-weight: 500;">
+                        {% if course.price and course.price > 0 %}
+                            {{ "{:,.0f}".format(course.price).replace(',', '.') }}
+                        {% else %}
+                            Miễn phí
+                        {% endif %}
+                    </td>
+
+                    <!-- Cột Ngày đăng ký -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #475569;">
+                        {{ course.created_date.strftime('%d/%m/%Y') if course.created_date else '11/11/2026' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div style="text-align: center; padding: 3.5rem 1rem; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+        <h4 style="color: #334155; margin-bottom: 0.5rem;">Chưa có lịch sử đăng ký!</h4>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">Bạn chưa đăng ký khóa học nào trên hệ thống.</p>
+        <a href="{{ url_for('home') }}" class="btn btn-primary px-4 py-2" style="text-decoration: none; border-radius: 6px;">
+            Khám phá khóa học ngay
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

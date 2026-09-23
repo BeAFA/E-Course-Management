@@ -4,24 +4,28 @@ document.addEventListener("DOMContentLoaded", function () {
     let typingTimer;
     const doneTypingInterval = 500; 
 
-    searchInput.addEventListener('input', function () {
+    if (searchInput && filterForm) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function () {
+                filterForm.submit();
+            }, doneTypingInterval);
+        });
 
-        typingTimer = setTimeout(function () {
-            filterForm.submit();
-        }, doneTypingInterval);
-    });
-
-    if (searchInput.value) {
-        searchInput.focus();
-        let val = searchInput.value;
-        searchInput.value = '';
-        searchInput.value = val;
+        if (searchInput.value) {
+            searchInput.focus();
+            let val = searchInput.value;
+            searchInput.value = '';
+            searchInput.value = val;
+        }
     }
 
     const selects = document.querySelectorAll('.auto-submit');
     selects.forEach(function (select) {
         select.addEventListener('change', function () {
-            filterForm.submit();
+            if (filterForm) {
+                filterForm.submit();
+            }
         });
     });
 
@@ -34,7 +38,9 @@ document.addEventListener("DOMContentLoaded", function () {
         function updateBulkBar() {
             var checked = document.querySelectorAll('.rec-select-checkbox:checked');
             bulkBar.style.display = checked.length > 0 ? 'flex' : 'none';
-            selectedCountEl.textContent = checked.length + ' khóa học được chọn';
+            if (selectedCountEl) {
+                selectedCountEl.textContent = checked.length + ' khóa học được chọn';
+            }
         }
 
         checkboxes.forEach(function (cb) {
@@ -66,17 +72,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ course_ids: courseIds })
             })
-            .then(function (res) { return res.json().then(function (data) {
-                if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
-                return data;
-            }); })
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+                    return data;
+                });
+            })
             .then(function () {
                 courseIds.forEach(function (id) {
                     var checkboxEl = document.querySelector('.rec-select-checkbox[value="' + id + '"]');
                     var cardEl = checkboxEl ? checkboxEl.closest('.course-rec-card') : null;
                     if (cardEl) {
                         cardEl.classList.add('is-removing');
-                        setTimeout(function () { cardEl.closest('.col-md-6').remove(); }, 250);
+                        setTimeout(function () {
+                            var parentCol = cardEl.closest('.col-md-6');
+                            if (parentCol) {
+                                parentCol.remove();
+                            } else {
+                                cardEl.remove();
+                            }
+                        }, 250);
                     }
                 });
                 updateBulkBar();

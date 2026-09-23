@@ -25,11 +25,12 @@
             </div>
 
             <div class="form-group">
-                <label for="level">Trình độ</label>
+                <label for="levelInput">Trình độ</label>
                 <div class="input-group mt-3 mb-3">
                     <button
                             type="button"
                             class="btn-submit dropdown-toggle"
+                            id="levelButton"
                             data-bs-toggle="dropdown">
                         {{ current_user.level.value if current_user.level else "Chọn trình độ" }}
                     </button>
@@ -43,7 +44,7 @@
                         </li>
                         {% endfor %}
                     </ul>
-                    <input type="hidden" name="level" id="level"
+                    <input type="hidden" name="level" id="levelInput"
                            value="{{ current_user.level.value if current_user.level else '' }}">
                 </div>
             </div>

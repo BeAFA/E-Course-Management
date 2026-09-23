@@ -154,6 +154,102 @@
     width: 100%;
 }
 
+/* ===== Khu vực chọn/tạo Tags ===== */
+.tag-input-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    max-width: 420px;
+}
+
+.tag-input {
+    flex: 1;
+    padding: 11px 16px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1e293b;
+    background-color: #f8fafc;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.tag-input:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.tag-input-row .btn-submit {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tag-input-row .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #1f2a44;
+}
+
+.tag-msg {
+    min-height: 18px;
+    font-weight: 500;
+}
+
+.tag-msg.text-success { color: #15803d !important; }
+.tag-msg.text-danger  { color: #dc2626 !important; }
+.tag-msg.text-muted   { color: #64748b !important; }
+
+.tag-list {
+    max-height: 180px;
+    overflow-y: auto;
+    background-color: #f8fafc;
+    border-color: #cbd5e1 !important;
+}
+
+.tag-list .btn-check {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.tag-pill:hover {
+    border-color: #2563eb;
+    color: #1e293b;
+}
+
+.tag-list .btn-check:checked + .tag-pill {
+    background-color: #1f2a44;
+    border-color: #1f2a44;
+    color: #ffffff;
+}
+
+.tag-list .btn-check:focus-visible + .tag-pill {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.tag-list .btn-check:active + .tag-pill {
+    transform: scale(0.97);
+}
+
 .btn-cancel {
     text-decoration: none;
     font-size: 14px;

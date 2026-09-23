@@ -1,9 +1,6 @@
 .ck{
     margin-bottom:5px;
 }
-input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; }
-button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-
 
 * {
     box-sizing: border-box;
@@ -83,8 +80,7 @@ button { width: 100%; padding: 10px; background: #007bff; color: white; border: 
     color: #dc2626;
 }
 
-.form input[type="text"],
-.form input[type="number"],
+.form input,
 .form select,
 .form textarea {
     width: 100% !important;
@@ -200,6 +196,7 @@ button { width: 100%; padding: 10px; background: #007bff; color: white; border: 
 }
 
 .btn-submit {
+    width:100%;
     background-color: #1f2a44;
     color: #ffffff;
     border: none;

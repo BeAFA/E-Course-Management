@@ -1,78 +1,130 @@
-{%extends 'layout/base.html'%}
+{% extends 'layout/base.html' %}
+
 {% block css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/form.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/lesson_detail.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create_test.css') }}">
+<style>
+    .media-preview-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 8px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .thumb-preview {
+        width: 120px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+    }
+    .media-info {
+        font-size: 13px;
+        color: #475569;
+    }
+</style>
 {% endblock %}
-{%block content%}
-<main class="create-form-container">
-    <div class="form-card">
-        <div class="form-header">
-            <h1>{% if lesson_id %}Chỉnh sửa bài giảng{% else %}Tạo bài giảng mới{% endif %}</h1>
-        </div>
 
-        {% if err_msg %}
-        <div class="alert-error">
-            {{ err_msg }}
+{% block content %}
+<div class="create-test-wrapper" style="max-width: 820px;">
+    <!-- Header -->
+    <div class="test-header flex-space-between">
+        <div>
+            <h2>
+                <i class="fa-solid fa-file-pen"></i> 
+                {% if lesson %}Chỉnh Sửa Bài Giảng{% else %}Tạo Bài Giảng Mới{% endif %}
+            </h2>
+            <div class="test-header-sub">
+                Khóa học: <strong>{{ course.name }}</strong> | Chương: <strong>{{ chapter.name }}</strong>
+            </div>
         </div>
-        {% endif %}
+        <a href="{{ url_for('lessons', chapter_id=chapter.id) }}" class="btn-main-action btn-add-q" style="text-decoration: none; background: rgba(255, 255, 255, 0.2);">
+            <i class="fa-solid fa-arrow-left"></i> Về danh sách bài
+        </a>
+    </div>
 
-        <form method="POST"
-              action="{% if lesson_id %}{{ url_for('create_or_update_lesson', lesson_id=lesson_id) }}{% else %}{{ url_for('create_or_update_lesson', chapter_id=chapter_id) }}{% endif %}"
-              class="form" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="title">Tên bài giảng <span class="required">*</span></label>
-                <input type="text" id="title" name="title" placeholder="Ví dụ: Lập trình Python"
-                       value="{{ lesson.title if lesson_id and lesson else '' }}" required>
+    {% if err_msg %}
+        <div class="alert-error-box">{{ err_msg }}</div>
+    {% endif %}
+
+    <form method="POST" action="" enctype="multipart/form-data">
+        <div class="test-card">
+            <div class="block-title">
+                <span><i class="fa-solid fa-circle-info text-primary"></i> Thông tin cơ bản</span>
             </div>
 
-            <div class="form-group">
-                {% if lesson.video_drive_id %}
-                <label for="video">Video hiện tại</label>
-                <div class="video-wrapper" id="current-video-preview">
-                    <video controls src="/media/video/{{ lesson.video_drive_id }}"></video>
+            <!-- Tiêu đề -->
+            <div class="form-group-custom">
+                <label class="form-label-custom">Tiêu đề bài giảng (*)</label>
+                <input type="text" name="title" class="form-control-custom" 
+                       value="{% if lesson %}{{ lesson.title }}{% endif %}" 
+                       placeholder="Ví dụ: Bài 1: Giới thiệu cú pháp cơ bản & cài đặt môi trường" required>
+            </div>
+
+            <!-- Hình ảnh minh họa bài giảng -->
+            <div class="form-group-custom mt-3">
+                <label class="form-label-custom"><i class="fa-regular fa-image text-primary me-1"></i> Ảnh minh họa / Ảnh bìa bài giảng</label>
+                {% if lesson and lesson.img_url %}
+                <div class="media-preview-box">
+                    <img src="{{ lesson.img_url }}" alt="Ảnh bài giảng" class="thumb-preview">
+                    <div class="media-info">
+                        <strong>Ảnh hiện tại:</strong> Đang hiển thị ảnh này.<br>
+                        <em>Chọn file ảnh mới bên dưới nếu muốn thay thế ảnh khác.</em>
+                    </div>
                 </div>
                 {% endif %}
-                <div class="video-wrapper" id="new-video-wrapper" style="display: none;">
-                    <p class="preview-label">Video sau khi thay đổi</p>
-                    <video id="new-video-thumb" controls src="{{video}}"></video>
-                </div>
-                <input type="file" id="video" name="video" accept="video/*" {% if not lesson %}required{% endif %}>
+                <input type="file" name="img" class="form-control-custom" accept="image/*">
             </div>
 
-            <div class="form-group">
-                <label for="img">Ảnh bài giảng</label>
-                {% if lesson_id and lesson and lesson.img_drive_id %}
-                <div class="img-preview">
-                    <img src="https://drive.google.com/thumbnail?id={{ lesson.img_drive_id }}&sz=w400"
-                         alt="Ảnh hiện tại" class="preview-thumb">
+            <!-- Video bài giảng -->
+            <div class="form-group-custom mt-3">
+                <label class="form-label-custom"><i class="fa-solid fa-video text-danger me-1"></i> Video bài giảng (Tải lên Google Drive)</label>
+                {% if lesson and lesson.video_drive_id %}
+                <div class="media-preview-box">
+                    <i class="fa-solid fa-circle-play text-danger" style="font-size: 32px;"></i>
+                    <div class="media-info">
+                        <strong>Đã có video trên hệ thống:</strong> ID <code>{{ lesson.video_drive_id }}</code><br>
+                        <em>Chọn file video mới (.mp4, .mkv, .mov) bên dưới nếu muốn tải video thay thế.</em>
+                    </div>
                 </div>
                 {% endif %}
-                <div class="img-preview" id="new-img-preview" style="display: none;">
-                    <p class="preview-label">Ảnh sau khi thay đổi</p>
-                    <img id="new-img-thumb" class="preview-thumb" src="" alt="Ảnh mới">
+                <input type="file" name="video" class="form-control-custom" accept="video/*">
+            </div>
+
+            <!-- Tài liệu PDF -->
+            <div class="form-group-custom mt-3">
+                <label class="form-label-custom"><i class="fa-solid fa-file-pdf text-danger me-1"></i> Tài liệu đính kèm (File PDF)</label>
+                {% if lesson and lesson.file_drive_id %}
+                <div class="media-preview-box">
+                    <i class="fa-solid fa-file-pdf text-danger" style="font-size: 32px;"></i>
+                    <div class="media-info">
+                        <strong>Đã có tài liệu PDF trên hệ thống.</strong><br>
+                        <em>Chọn file PDF mới bên dưới nếu bạn muốn thay đổi tài liệu.</em>
+                    </div>
                 </div>
-                <input type="file" id="img" name="img" {% if not lesson %}required{% endif %}>
+                {% endif %}
+                <input type="file" name="pdf" class="form-control-custom" accept="application/pdf">
             </div>
 
-            <div class="form-group">
-                <label for="article">Bài viết (nếu có)</label>
-                <textarea class="ckeditor" id="article" name="article">{{ lesson.article if lesson_id and lesson else '' }}</textarea>
+            <!-- Nội dung bài viết / lý thuyết -->
+            <div class="form-group-custom mt-3">
+                <label class="form-label-custom"><i class="fa-solid fa-align-left text-primary me-1"></i> Nội dung bài giảng (Lý thuyết / Hướng dẫn)</label>
+                <textarea name="article" class="form-control-custom" rows="10" 
+                          placeholder="Nhập nội dung bài học, hướng dẫn các bước, code mẫu, cú pháp...">{% if lesson %}{{ lesson.article or '' }}{% endif %}</textarea>
             </div>
 
-            <div class="form-actions">
-                <a href="{{ url_for('lessons', chapter_id=chapter_id if chapter_id else lesson.chapter_id) }}"
-                   class="btn-cancel">Hủy bỏ</a>
-                <button type="submit" class="btn-submit">
-                    {% if lesson_id %}Lưu thay đổi{% else %}Tạo bài học{% endif %}
+            <!-- Nút hành động -->
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{{ url_for('lessons', chapter_id=chapter.id) }}" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 10px; text-decoration: none;">Hủy</a>
+                <button type="submit" class="btn-main-action btn-save-test px-4 py-2">
+                    <i class="fa-solid fa-floppy-disk"></i> {% if lesson %}Lưu Cập Nhật{% else %}Tạo Bài Giảng Mới{% endif %}
                 </button>
             </div>
-        </form>
-    </div>
-</main>
-{%endblock%}
-{% block js %}
-<script src="{{ url_for('static', filename='js/img_pre_update.js') }}"></script>
-<script src="{{ url_for('static', filename='js/video_pre_update.js') }}"></script>
-<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
-<script src="/static/js/ckeditor.js"></script>
+        </div>
+    </form>
+</div>
 {% endblock %}

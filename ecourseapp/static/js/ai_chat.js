@@ -147,38 +147,38 @@
     });
   }
 
-  function buildMessageNode(m) {
-      var wrap = document.createElement('div');
-      wrap.className = 'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-ai');
-
-      var avatar = document.createElement('div');
-      avatar.className = 'msg-avatar';
-      avatar.textContent = m.role === 'user' ? 'Bạn' : 'AI';
-
-      var bubble = document.createElement('div');
-      bubble.className = 'msg-bubble';
-      var p = document.createElement('div');
-      p.textContent = m.text;
-      bubble.appendChild(p);
-
-      if (m.courses && m.courses.length) {
-        var cardsWrap = document.createElement('div');
-        cardsWrap.className = 'course-cards';
-        m.courses.forEach(function (c) { cardsWrap.appendChild(buildCourseCard(c)); });
-        bubble.appendChild(cardsWrap);
-
-        var viewAllBtn = document.createElement('a');
-        viewAllBtn.className = 'view-all-courses-btn';
-        var ids = m.courses.map(function (c) { return c.id; }).join(',');
-        viewAllBtn.href = '/courses?ids=' + encodeURIComponent(ids);
-        viewAllBtn.textContent = 'Xem tất cả ' + m.courses.length + ' khóa học';
-        bubble.appendChild(viewAllBtn);
-      }
-
-      wrap.appendChild(avatar);
-      wrap.appendChild(bubble);
-      return wrap;
-    }
+//  function buildMessageNode(m) {
+//      var wrap = document.createElement('div');
+//      wrap.className = 'msg ' + (m.role === 'user' ? 'msg-user' : 'msg-ai');
+//
+//      var avatar = document.createElement('div');
+//      avatar.className = 'msg-avatar';
+//      avatar.textContent = m.role === 'user' ? 'Bạn' : 'AI';
+//
+//      var bubble = document.createElement('div');
+//      bubble.className = 'msg-bubble';
+//      var p = document.createElement('div');
+//      p.textContent = m.text;
+//      bubble.appendChild(p);
+//
+//      if (m.courses && m.courses.length) {
+//        var cardsWrap = document.createElement('div');
+//        cardsWrap.className = 'course-cards';
+//        m.courses.forEach(function (c) { cardsWrap.appendChild(buildCourseCard(c)); });
+//        bubble.appendChild(cardsWrap);
+//
+//        var viewAllBtn = document.createElement('a');
+//        viewAllBtn.className = 'view-all-courses-btn';
+//        var ids = m.courses.map(function (c) { return c.id; }).join(',');
+//        viewAllBtn.href = '/courses?ids=' + encodeURIComponent(ids);
+//        viewAllBtn.textContent = 'Xem tất cả ' + m.courses.length + ' khóa học';
+//        bubble.appendChild(viewAllBtn);
+//      }
+//
+//      wrap.appendChild(avatar);
+//      wrap.appendChild(bubble);
+//      return wrap;
+//    }
 
   /* ---------- Soạn tin nhắn (auto-resize textarea) ---------- */
   var MAX_TEXTAREA_LINES = 5;
@@ -319,14 +319,16 @@
 
   function buildCourseCard(c) {
     var card = document.createElement('div');
-    card.className = 'course-card';
+    card.className = 'course-card' + (c.dismissed ? ' is-dismissed' : '');
     card.innerHTML =
       '<div class="course-thumb">' + c.icon + '</div>' +
       '<div class="course-info">' +
       '<p class="course-name">' + c.name + '</p>' +
       '<p class="course-meta">' + c.category + '</p>' +
       '</div>' +
-      '<div class="course-price">' + Number(c.price).toLocaleString('vi-VN') + ' đ</div>';
+      (c.dismissed
+        ? '<span class="course-dismissed-badge">Đã xóa</span>'
+        : '<div class="course-price">' + Number(c.price).toLocaleString('vi-VN') + ' đ</div>');
     return card;
   }
 

@@ -1,0 +1,92 @@
+{% extends 'layout/base.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="certificate-history-container" style="max-width: 1100px; margin: 2rem auto 4rem auto; padding: 0 1rem;">
+    <!-- Tiêu đề căn giữa -->
+    <h1 style="font-size: 2rem; font-weight: 500; color: #2b2b2b; margin: 0 0 2.5rem 0; text-align: center;">
+        Chứng chỉ của tôi
+    </h1>
+
+    {% if certs and certs|length > 0 %}
+    <!-- Bảng danh sách chứng chỉ -->
+    <div style="overflow-x: auto; background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border-radius: 4px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.92rem; border: 1.5px solid #4a4a4a;">
+            <thead>
+                <tr style="background-color: #3f3f3f; color: #ffffff;">
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 25%;">Khóa học</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 15%;">Danh mục</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 18%;">Mã chứng chỉ</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 18%;">Giảng viên</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 12%;">Ngày cấp</th>
+                    <th style="padding: 14px 10px; border: 1px solid #5a5a5a; font-weight: 500; width: 12%;">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cert in certs %}
+                <!-- Click vào dòng để xem chi tiết chứng chỉ -->
+                <tr style="border-bottom: 1px solid #4a4a4a; cursor: pointer; transition: background 0.15s;" 
+                    onclick="window.location.href='{{ url_for('view_certificate', cert_code=cert.code) }}';"
+                    onmouseover="this.style.background='#f1f5f9'" 
+                    onmouseout="this.style.background='#ffffff'">
+                    
+                    <!-- Khóa học -->
+                    <td style="padding: 14px 12px; border: 1px solid #4a4a4a; font-weight: 600; text-align: center;">
+                        <a href="{{ url_for('view_certificate', cert_code=cert.code) }}" 
+                           style="color: #2563eb; text-decoration: none;"
+                           onmouseover="this.style.textDecoration='underline'" 
+                           onmouseout="this.style.textDecoration='none'">
+                            {{ cert.course.name }}
+                        </a>
+                    </td>
+
+                    <!-- Danh mục -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #334155;">
+                        {{ cert.course.category.name if cert.course.category else 'Khóa học' }}
+                    </td>
+
+                    <!-- Mã chứng chỉ -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #475569; font-family: monospace; font-weight: 600;">
+                        {{ cert.code }}
+                    </td>
+
+                    <!-- Giảng viên -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #334155;">
+                        {{ cert.course.teacher.name if cert.course.teacher else 'Giảng viên' }}
+                    </td>
+
+                    <!-- Ngày cấp -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a; color: #475569;">
+                        {{ cert.created_date.strftime('%d/%m/%Y') if cert.created_date else '18/09/2026' }}
+                    </td>
+
+                    <!-- Hành động xem -->
+                    <td style="padding: 14px 10px; border: 1px solid #4a4a4a;">
+                        <a href="{{ url_for('view_certificate', cert_code=cert.code) }}" 
+                           class="btn btn-sm btn-outline-primary"
+                           style="font-size: 0.82rem; padding: 4px 10px; border-radius: 4px; text-decoration: none;"
+                           onclick="event.stopPropagation();">
+                            <i class="fa-solid fa-eye me-1"></i> Xem
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div style="text-align: center; padding: 3.5rem 1rem; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+        <i class="fa-solid fa-award text-muted mb-3" style="font-size: 3rem; color: #94a3b8;"></i>
+        <h4 style="color: #334155; margin-bottom: 0.5rem;">Bạn chưa có chứng chỉ nào!</h4>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">Hãy hoàn thành tất cả các bài kiểm tra của khóa học để được cấp chứng chỉ.</p>
+        <a href="{{ url_for('my_enrolled_courses') }}" class="btn btn-primary px-4 py-2" style="text-decoration: none; border-radius: 6px;">
+            Vào học ngay
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
